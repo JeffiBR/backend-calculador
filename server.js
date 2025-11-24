@@ -14,7 +14,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// Mantém express.json() para outras rotas, mas o Multer lida com 'multipart/form-data'
+app.use(express.json()); 
 
 // Configuração do Multer (Upload de memória)
 const storage = multer.memoryStorage();
@@ -25,9 +26,17 @@ app.get('/api/wake-up', (req, res) => {
     res.status(200).json({ message: "Servidor acordado e pronto!" });
 });
 
-// Rota de Salvamento
+// Rota de Salvamento (CORRIGIDA)
 app.post('/api/products', upload.single('foto'), async (req, res) => {
     try {
+        // CORREÇÃO ESSENCIAL: Verifica se o campo 'dados' existe
+        if (!req.body.dados) {
+            console.error("Erro: Campo 'dados' não encontrado no corpo da requisição.");
+            // Retorna um 400 com JSON explícito.
+            return res.status(400).json({ error: "Dados do produto (campo 'dados') estão ausentes. Verifique o envio do FormData no frontend." });
+        }
+        
+        // Tenta analisar o JSON após a verificação
         const dados = JSON.parse(req.body.dados);
         const file = req.file;
         let publicUrl = null;
@@ -69,6 +78,8 @@ app.post('/api/products', upload.single('foto'), async (req, res) => {
         res.status(200).json({ message: "Produto salvo com sucesso!", data });
 
     } catch (error) {
+        // O bloco catch garante que qualquer outro erro (como falha no Supabase) 
+        // retorne um 500 formatado em JSON
         console.error("Erro ao salvar:", error);
         res.status(500).json({ error: error.message });
     }
