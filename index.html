@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Custo de Produto</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilos gerais */
+        :root {
+            --primary-color: #5d78ff;
+            --secondary-color: #8a9bff;
+            --accent-color: #ff6b8b;
+            --light-color: #f8f9ff;
+            --dark-color: #2d3748;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --error-color: #f44336;
+            --gray-light: #f1f3f9;
+            --gray-medium: #e2e8f0;
+            --gray-dark: #a0aec0;
+            --text-light: #718096;
+            --text-dark: #2d3748;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --radius: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7ff 0%, #e6eeff 100%);
+            color: var(--text-dark);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .header-icon {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .form-section {
+            background-color: white;
+            border-radius: var(--radius);
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            font-size: 1.3rem;
+        }
+        
+        .section-title i {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-dark);
+        }
+        
+        /* Estiliza input de texto/número/select */
+        input:not([type="file"]):not([type="checkbox"]), select {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border: 1px solid var(--gray-medium);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: var(--light-color);
+        }
+        
+        /* --- ESTILOS DO NOVO BOTÃO DE FOTO --- */
+        .custom-file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .custom-file-upload input[type="file"] {
+            /* Esconde o input original, mas o mantém funcional */
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 5;
+        }
+
+        #customFileUploadLabel {
+            /* Estilo do botão personalizado */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 15px;
+            border: 2px dashed var(--primary-color); 
+            border-radius: 8px;
+            background-color: var(--light-color);
+            color: var(--primary-color);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            /* Para o nome do arquivo */
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        #customFileUploadLabel:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--secondary-color);
+            transform: translateY(-1px); /* Efeito de subida */
+            box-shadow: 0 4px 8px rgba(93, 120, 255, 0.2);
+        }
+
+        /* Estado quando o arquivo está selecionado */
+        #customFileUploadLabel.file-selected {
+            border: 2px solid var(--success-color);
+            background-color: #e6fffa;
+            color: var(--success-color);
+        }
+        /* --- FIM ESTILOS DO NOVO BOTÃO DE FOTO --- */
+        
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(93, 120, 255, 0.2);
+            background-color: white;
+        }
+        
+        /* Toggle Switch */
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 15px;
+            background-color: var(--light-color);
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .toggle-switch label {
+            margin-bottom: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .switch-label {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin-bottom: 0;
+        }
+
+        .switch-label input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            padding: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--gray-medium);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .slider {
+            background-color: var(--success-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        /* FIM Toggle Switch */
+
+        .tecidos-container {
+            position: relative;
+        }
+        
+        .tecidos-search {
+            margin-bottom: 10px;
+        }
+        
+        .tecidos-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--gray-medium);
+            border-radius: 8px;
+            display: none;
+            position: absolute;
+            background: white;
+            width: 100%;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+        
+        .tecidos-list.active {
+            display: block;
+        }
+        
+        .tecidos-category {
+            padding: 12px 15px;
+            background-color: var(--light-color);
+            font-weight: bold;
+            border-bottom: 1px solid var(--gray-medium);
+            color: var(--primary-color);
+        }
+        
+        .tecido-option {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--gray-light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tecido-option:hover {
+            background-color: var(--light-color);
+        }
+        
+        .tecidos-selected {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            display: none;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .tecidos-selected.active {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .aviamentos-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            border: 2px dashed var(--secondary-color);
+        }
+        
+        .aviamento-item {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .aviamento-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .aviamento-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--accent-color);
+        }
+        
+        .remove-aviamento {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .remove-aviamento:hover {
+            background-color: #ff4d6d;
+            transform: scale(1.05);
+        }
+        
+        .tipo-aviamento {
+            margin-bottom: 15px;
+        }
+        
+        .tipo-aviamento select {
+            width: 100%;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(93, 120, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: var(--gray-light);
+            color: var(--text-dark);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--gray-medium);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #3d8b40;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .previa {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e6eeff 100%);
+            border-radius: var(--radius);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .previa h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .previa-section-header {
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-top: 15px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--gray-medium);
+            padding-bottom: 5px;
+        }
+
+        .previa-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.95em;
+        }
+
+        .previa-item.highlight {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .previa-total {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: var(--primary-color);
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid var(--primary-color);
+        }
+        
+        .resultado {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e6eeff 100%);
+            border-radius: var(--radius);
+            display: none;
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .resultado h2 {
+            color: var(--success-color);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .resultado-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-light);
+        }
+        
+        .resultado-total {
+            font-weight: bold;
+            font-size: 1.3em;
+            color: var(--success-color);
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid var(--success-color);
+        }
+        
+        .error-message {
+            color: var(--error-color);
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .error-message.active {
+            display: flex;
+        }
+        
+        .input-error input:not([type="file"]):not([type="checkbox"]),
+        .input-error select {
+            border-color: var(--error-color);
+            background-color: #fff5f5 !important;
+        }
+        
+        /* Manter o estilo de erro para o custom file upload */
+        .input-error #customFileUploadLabel {
+            border-color: var(--error-color);
+            background-color: #fff5f5 !important;
+            color: var(--error-color);
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert-error {
+            background-color: #fff5f5;
+            color: var(--error-color);
+            border: 1px solid #fed7d7;
+        }
+        
+        .alert-success {
+            background-color: #f0fff4;
+            color: var(--success-color);
+            border: 1px solid #c6f6d5;
+        }
+        
+        .aviamento-calc-info {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            font-size: 0.9em;
+            display: none;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .aviamento-calc-info.active {
+            display: block;
+        }
+        
+        .calc-formula {
+            font-family: monospace;
+            background-color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            border: 1px solid var(--gray-medium);
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 0;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        .calculation-example {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .highlight-info {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 2px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <div class="header-icon">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                Calculadora de Custo de Produto
+            </h1>
+            <p>Calcule o custo total do seu produto de forma precisa e profissional</p>
+        </header>
+        
+        <div class="form-container">
+            <div id="alert" class="alert">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="alert-message"></span>
+            </div>
+            
+            <form id="produtoForm">
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="fas fa-tshirt"></i>
+                        <h2>Informações do Produto</h2>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="nomeProduto">
+                                <i class="fas fa-tag"></i>
+                                Nome do Produto
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-pen input-icon"></i>
+                                <input type="text" id="nomeProduto" placeholder="Ex: Vestido Floral" required>
+                            </div>
+                            <div class="error-message" id="nomeProdutoError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Insira um nome para o produto
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quantidadeProdutos">
+                                <i class="fas fa-cubes"></i>
+                                Quantidade de Produtos
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-sort-numeric-up input-icon"></i>
+                                <input type="number" id="quantidadeProdutos" class="number-input" value="1" min="1" required>
+                            </div>
+                            <div class="error-message" id="quantidadeProdutosError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Mínimo de 1 produto
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="produtoFoto">
+                            <i class="fas fa-camera"></i>
+                            Foto do Produto (Máx 5MB)
+                        </label>
+                        <div class="custom-file-upload">
+                            <input type="file" id="produtoFoto" accept="image/*">
+                            <label for="produtoFoto" id="customFileUploadLabel">
+                                <i class="fas fa-upload"></i> Escolher Arquivo
+                            </label>
+                        </div>
+                        <div class="error-message" id="produtoFotoError">
+                            <i class="fas fa-exclamation-circle"></i>
+                            O arquivo excede o limite de 5MB ou é inválido.
+                        </div>
+                        <div class="highlight-info" id="imagePreview" style="margin-top: 10px; display: none; padding: 15px; background-color: var(--gray-light); border-radius: 8px;">
+                            <strong>Prévia:</strong>
+                            <img id="previewImage" src="#" alt="Prévia da Imagem" style="max-width: 100%; height: auto; display: block; margin-top: 10px; border-radius: 8px; border: 1px solid var(--gray-medium);">
+                        </div>
+                    </div>
+                    <div class="form-group tecidos-container">
+                        <label for="tipoTecido">
+                            <i class="fas fa-palette"></i>
+                            Tipo de Tecido
+                        </label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-search input-icon"></i>
+                            <input type="text" id="tipoTecido" class="tecidos-search" placeholder="Buscar tecido..." required>
+                        </div>
+                        <div class="error-message" id="tipoTecidoError">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Por favor, selecione um tipo de tecido
+                        </div>
+                        
+                        <div class="tecidos-list" id="tecidosList">
+                            </div>
+                        
+                        <div class="tecidos-selected" id="tecidosSelected">
+                            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                            <div>
+                                <strong>Tecido selecionado:</strong> 
+                                <span id="tecidoSelecionadoNome"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label for="valorTotalTecido">
+                                <i class="fas fa-dollar-sign"></i>
+                                Valor Total Pago (R$)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-money-bill-wave input-icon"></i>
+                                <input type="text" id="valorTotalTecido" class="money-input" placeholder="0,00" required>
+                            </div>
+                            <div class="error-message" id="valorTotalTecidoError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Insira o valor total pago
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="comprimentoTotalTecido">
+                                <i class="fas fa-ruler-horizontal"></i>
+                                Comp. Total Comprado (cm)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-ruler input-icon"></i>
+                                <input type="text" id="comprimentoTotalTecido" class="number-input" placeholder="Ex: 100" required>
+                            </div>
+                            <div class="error-message" id="comprimentoTotalTecidoError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Insira o comprimento total
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="larguraTecido">
+                                <i class="fas fa-arrows-alt-v"></i>
+                                Largura do Tecido (cm)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-arrows-alt-h input-icon"></i>
+                                <input type="text" id="larguraTecido" class="number-input" placeholder="Ex: 140" required>
+                            </div>
+                            <div class="error-message" id="larguraTecidoError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Insira a largura
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="metragemUtilizada">
+                            <i class="fas fa-cut"></i>
+                            Comprimento Utilizado na Peça (cm)
+                        </label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-tape input-icon"></i>
+                            <input type="text" id="metragemUtilizada" class="number-input" placeholder="Ex: 50" required>
+                        </div>
+                        <div class="error-message" id="metragemUtilizadaError">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Por favor, insira a metragem utilizada
+                        </div>
+                        <div class="calculation-example" id="tecidoCalcInfo" style="display:none; margin-top:5px;">
+                            </div>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="valorHora">
+                                <i class="fas fa-clock"></i>
+                                Valor da Hora Trabalhada (R$)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-dollar-sign input-icon"></i>
+                                <input type="text" id="valorHora" class="money-input" placeholder="0,00" required>
+                            </div>
+                            <div class="error-message" id="valorHoraError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Por favor, insira um valor válido
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tempoGasto">
+                                <i class="fas fa-stopwatch"></i>
+                                Tempo Gasto (minutos)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-hourglass-half input-icon"></i>
+                                <input type="text" id="tempoGasto" class="number-input" placeholder="0" required>
+                            </div>
+                            <div class="error-message" id="tempoGastoError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Por favor, insira um tempo válido
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="valorEmbalagem">
+                                <i class="fas fa-box-open"></i>
+                                Valor Total da Embalagem (R$ - Lote)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-dollar-sign input-icon"></i>
+                                <input type="text" id="valorEmbalagem" class="money-input" placeholder="0,00" required>
+                            </div>
+                            <div class="error-message" id="valorEmbalagemError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Por favor, insira um valor válido
+                            </div>
+                            <div class="highlight-info" style="padding-left: 5px;">
+                                <i class="fas fa-info-circle"></i> Este valor não se multiplica pela quantidade de produtos.
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="custoTransporte">
+                                <i class="fas fa-truck"></i>
+                                Custo de Transporte (R$ - Unitário)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-dollar-sign input-icon"></i>
+                                <input type="text" id="custoTransporte" class="money-input" value="0,50" required>
+                            </div>
+                            <div class="error-message" id="custoTransporteError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Valor inválido
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="fas fa-tools"></i>
+                        <h2>Aviamentos</h2>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="toggle-switch">
+                            <label for="temAviamentos" style="margin-bottom: 0;">
+                                <i class="fas fa-paperclip"></i>
+                                Este produto utiliza aviamentos?
+                            </label>
+                            <label class="switch-label">
+                                <input type="checkbox" id="temAviamentos">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="aviamentosSection" class="aviamentos-section">
+                        <div id="aviamentosContainer">
+                            </div>
+                        <button type="button" id="adicionarAviamento" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i>
+                            Adicionar Aviamento
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="fas fa-chart-line"></i>
+                        <h2>Lucro</h2>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="porcentagemLucro">
+                            <i class="fas fa-percentage"></i>
+                            Porcentagem de Lucro (%)
+                        </label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-chart-pie input-icon"></i>
+                            <input type="text" id="porcentagemLucro" class="number-input" placeholder="0,00" required>
+                        </div>
+                        <div class="calculation-example" style="margin-top: 5px; font-size: 0.85em;">
+                            <i class="fas fa-info-circle"></i> O lucro incidirá apenas sobre os materiais base: **Tecido + Aviamentos**. Os custos de Mão de Obra, Embalagem e Transporte serão somados ao final.
+                        </div>
+                        <div class="error-message" id="porcentagemLucroError">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Por favor, insira uma porcentagem válida
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="previa" class="previa">
+                    <h2>
+                        <i class="fas fa-eye"></i>
+                        Prévia do Cálculo (Unitário)
+                    </h2>
+                    <div id="previaDetalhes">
+                        </div>
+                </div>
+                
+                <div class="buttons">
+                    <button type="button" id="calcular" class="btn btn-primary">
+                        <i class="fas fa-calculator"></i>
+                        Calcular Custo Completo
+                    </button>
+                    <button type="reset" class="btn btn-secondary">
+                        <i class="fas fa-broom"></i>
+                        Limpar Formulário
+                    </button>
+                </div>
+            </form>
+            
+            <div id="resultado" class="resultado">
+                <h2>
+                    <i class="fas fa-chart-bar"></i>
+                    Resultado do Cálculo
+                </h2>
+                <div id="resultadoDetalhes">
+                    </div>
+                <button type="button" id="salvarDadosBtn" class="btn btn-success" style="margin-top: 20px; display: none;">
+                    <i class="fas fa-save"></i>
+                    Salvar no Banco de Dados
+                </button>
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // ** CONFIGURAÇÃO DO BACKEND (AJUSTADO) **
+        const BACKEND_URL = 'https://backend-calculador.onrender.com';
+        const SAVE_ENDPOINT = `${BACKEND_URL}/api/products`; // Endpoint de exemplo para salvar
+        
+        const MAX_FILE_SIZE_MB = 5;
+        const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // 5MB
+
+        // Variáveis de estado
+        let produtoFotoFile = null;
+        let ultimoResultadoCalculado = null;
+        let aviamentoCount = 0;
+        const maxAviamentos = 10;
+        let tecidoSelecionado = '';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const tecidos = {
+                "leves_para_roupas": [
+                    "Viscose", "Tricoline", "Algodão Cru", "Crepe (bubble, musseline, alfaiataria)", "Malha PV",
+                    "Malha de Algodão", "Suplex", "Seda (natural e sintética)", "Cetim", "Chiffon / Musseline",
+                    "Tule (fino, bordado, francês)"
+                ],
+                "estruturados_alfaiataria": [
+                    "Twill", "Sarja", "Oxford", "Gabardine", "Linho", "Linho Misto",
+                    "Veludo (molhado, alemão, cotelê)"
+                ],
+                "artesanato_jogos_americanos": [
+                    "Tricoline 100% Algodão", "Oxford", "Brim Leve", "Sarja Macia", "Lona Leve",
+                    "Tecidos Impermeáveis (bagun, tactel grosso)", "Meia Panamá", "Gorgurão Grosso", "Algodão Cru"
+                ],
+                "calçados_bolsas_pecas_firmes": [
+                    "Courino", "Napa Sintética", "Camurça Sintética", "Lona Grossa", "Jeans"
+                ],
+                "forros": [
+                    "Forro de Cetim", "Forro Poliéster", "Tricoline Fino", "Matelassê"
+                ]
+            };
+
+            const temAviamentosCheckbox = document.getElementById('temAviamentos');
+            const aviamentosSection = document.getElementById('aviamentosSection');
+            const aviamentosContainer = document.getElementById('aviamentosContainer');
+            const adicionarAviamentoBtn = document.getElementById('adicionarAviamento');
+            const calcularBtn = document.getElementById('calcular');
+            const resultadoDiv = document.getElementById('resultado');
+            const resultadoDetalhes = document.getElementById('resultadoDetalhes');
+            const previaDiv = document.getElementById('previa');
+            const previaDetalhes = document.getElementById('previaDetalhes');
+            const form = document.getElementById('produtoForm');
+            const alertDiv = document.getElementById('alert');
+            const alertMessage = document.getElementById('alert-message');
+            const tecidosList = document.getElementById('tecidosList');
+            const tecidosSelected = document.getElementById('tecidosSelected');
+            const tecidoSelecionadoNome = document.getElementById('tecidoSelecionadoNome');
+            const tipoTecidoInput = document.getElementById('tipoTecido');
+            const tecidoCalcInfo = document.getElementById('tecidoCalcInfo');
+
+            // Elementos de foto e salvar
+            const produtoFotoInput = document.getElementById('produtoFoto');
+            const salvarDadosBtn = document.getElementById('salvarDadosBtn');
+            const previewImage = document.getElementById('previewImage');
+            const imagePreviewDiv = document.getElementById('imagePreview');
+            // NOVO: Referência ao botão customizado
+            const customFileUploadLabel = document.getElementById('customFileUploadLabel');
+
+            // --- Funções Auxiliares ---
+            
+            function formatarCategoriaNome(categoria) {
+                const nomes = {
+                    'leves_para_roupas': 'Tecidos Leves para Roupas',
+                    'estruturados_alfaiataria': 'Tecidos Estruturados para Alfaiataria',
+                    'artesanato_jogos_americanos': 'Tecidos para Artesanato e Jogos Americanos',
+                    'calçados_bolsas_pecas_firmes': 'Tecidos para Calçados, Bolsas e Peças Firmes',
+                    'forros': 'Forros'
+                };
+                return nomes[categoria] || categoria;
+            }
+            
+            function formatarMoeda(valor) {
+                valor = valor.replace(/\D/g, '');
+                valor = (parseFloat(valor) / 100).toFixed(2);
+                return new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(valor);
+            }
+            
+            function parseMoeda(valor) {
+                valor = valor.replace(/[^\d,]/g, '');
+                return parseFloat(valor.replace(',', '.')) || 0;
+            }
+            
+            function formatarNumero(valor) {
+                if (!valor) return '';
+                let limpo = valor.toString().replace(/[^\d,.]/g, '');
+                limpo = limpo.replace(/\./g, '');
+                limpo = limpo.replace(',', '.');
+                const numero = parseFloat(limpo) || 0;
+                return new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                }).format(numero);
+            }
+            
+            function parseNumero(valor) {
+                if (!valor) return 0;
+                let limpo = valor.toString();
+                limpo = limpo.replace(/\./g, ''); 
+                limpo = limpo.replace(',', '.'); 
+                limpo = limpo.replace(/[^\d.]/g, ''); 
+                return parseFloat(limpo) || 0;
+            }
+            
+            function mostrarErro(campoId, mensagem) {
+                const campo = document.getElementById(campoId);
+                const erro = document.getElementById(campoId + 'Error');
+                if (campo && erro) {
+                    // Para o caso da foto, adicionamos a classe de erro ao container pai
+                    if (campoId === 'produtoFoto') {
+                        campo.closest('.form-group').classList.add('input-error');
+                    } else {
+                        campo.classList.add('input-error');
+                    }
+                    erro.textContent = mensagem;
+                    erro.classList.add('active');
+                }
+            }
+            
+            function limparErro(campoId) {
+                const campo = document.getElementById(campoId);
+                const erro = document.getElementById(campoId + 'Error');
+                if (campo && erro) {
+                    if (campoId === 'produtoFoto') {
+                        campo.closest('.form-group').classList.remove('input-error');
+                    } else {
+                        campo.classList.remove('input-error');
+                    }
+                    erro.classList.remove('active');
+                }
+            }
+            
+            function mostrarAlerta(mensagem, tipo) {
+                alertMessage.textContent = mensagem;
+                alertDiv.className = `alert alert-${tipo}`;
+                alertDiv.style.display = 'flex';
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+            }
+            
+            function carregarTecidos() {
+                let html = '';
+                for (const categoria in tecidos) {
+                    const tecidosCategoria = tecidos[categoria];
+                    const categoriaNome = formatarCategoriaNome(categoria);
+                    html += `<div class="tecidos-category">${categoriaNome}</div>`;
+                    tecidosCategoria.forEach(tecido => {
+                        html += `
+                            <div class="tecido-option" data-tecido="${tecido}">
+                                <i class="fas fa-fabric"></i>
+                                ${tecido}
+                            </div>`;
+                    });
+                }
+                tecidosList.innerHTML = html;
+                document.querySelectorAll('.tecido-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        tecidoSelecionado = this.getAttribute('data-tecido');
+                        tipoTecidoInput.value = tecidoSelecionado;
+                        tecidoSelecionadoNome.textContent = tecidoSelecionado;
+                        tecidosSelected.classList.add('active');
+                        tecidosList.classList.remove('active');
+                        limparErro('tipoTecido');
+                        atualizarPrevia();
+                    });
+                });
+            }
+            
+            function validarCampos() {
+                let valido = true;
+                const camposObrigatorios = [
+                    'nomeProduto', 'valorTotalTecido', 'comprimentoTotalTecido', 'larguraTecido',
+                    'tipoTecido', 'metragemUtilizada',
+                    'valorHora', 'tempoGasto', 'valorEmbalagem', 'porcentagemLucro',
+                    'custoTransporte', 'quantidadeProdutos'
+                ];
+                
+                camposObrigatorios.forEach(campoId => {
+                    const campo = document.getElementById(campoId);
+                    if (!campo || !campo.value.trim()) {
+                        mostrarErro(campoId, 'Este campo é obrigatório');
+                        valido = false;
+                    } else {
+                        limparErro(campoId);
+                    }
+                });
+                
+                const camposNumericos = ['valorTotalTecido', 'comprimentoTotalTecido', 'larguraTecido', 'metragemUtilizada', 'valorHora', 'tempoGasto', 'valorEmbalagem', 'porcentagemLucro', 'custoTransporte', 'quantidadeProdutos'];
+                camposNumericos.forEach(campoId => {
+                    const campo = document.getElementById(campoId);
+                    if (campo && campo.value.trim()) {
+                        const valor = campoId.includes('valor') || campoId === 'custoTransporte' ? parseMoeda(campo.value) : parseNumero(campo.value);
+                        if (isNaN(valor) || valor < 0 || (campoId === 'quantidadeProdutos' && valor === 0)) {
+                            mostrarErro(campoId, 'Por favor, insira um valor válido');
+                            valido = false;
+                        }
+                    }
+                });
+
+                if (produtoFotoFile && produtoFotoFile.size > MAX_FILE_SIZE_BYTES) {
+                     mostrarErro('produtoFoto', `O arquivo excede o limite de ${MAX_FILE_SIZE_MB}MB.`);
+                     valido = false;
+                }
+                
+                if (temAviamentosCheckbox.checked) {
+                    const aviamentos = aviamentosContainer.querySelectorAll('.aviamento-item');
+                    if (aviamentos.length === 0) {
+                        mostrarAlerta('Você marcou que há aviamentos, mas não adicionou nenhum.', 'error');
+                        valido = false;
+                    } else {
+                        aviamentos.forEach(item => {
+                            const tipoSelect = item.querySelector('.tipo-aviamento-select');
+                            const tipo = tipoSelect ? tipoSelect.value : 'metro';
+                            
+                            if (tipo === 'metro') {
+                                const valorPago = parseMoeda(item.querySelector('.aviamento-valor').value);
+                                const metrosTotais = parseNumero(item.querySelector('.aviamento-metros-total').value);
+                                const metrosUtilizados = parseNumero(item.querySelector('.aviamento-metros-utilizados').value);
+                                if (isNaN(valorPago) || valorPago <= 0 || isNaN(metrosTotais) || metrosTotais <= 0 || isNaN(metrosUtilizados) || metrosUtilizados < 0) {
+                                    if (valorPago <= 0 || metrosTotais <= 0) { 
+                                        mostrarAlerta('Verifique os valores de custo total e total de metros dos aviamentos por metro', 'error');
+                                        valido = false;
+                                    }
+                                }
+                            } else {
+                                const valorPago = parseMoeda(item.querySelector('.aviamento-valor-unidade').value);
+                                const unidadesUtilizadas = parseFloat(item.querySelector('.aviamento-unidades-utilizadas').value);
+                                if (isNaN(valorPago) || valorPago <= 0 || isNaN(unidadesUtilizadas) || unidadesUtilizadas <= 0) {
+                                    mostrarAlerta('Verifique as unidades utilizadas dos aviamentos por unidade', 'error');
+                                    valido = false;
+                                }
+                            }
+                        });
+                    }
+                }
+                return valido;
+            }
+            
+            // --- Event Listeners para Inputs (Formatação) ---
+            document.querySelectorAll('.money-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const valor = this.value;
+                    if (valor) this.value = formatarMoeda(valor);
+                    limparErro(this.id);
+                    atualizarPrevia();
+                });
+                input.addEventListener('blur', function() {
+                    const valor = this.value;
+                    if (valor) this.value = formatarMoeda(valor);
+                    atualizarPrevia();
+                });
+            });
+            
+            document.querySelectorAll('.number-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^\d,.]/g, '');
+                    limparErro(this.id);
+                    atualizarPrevia();
+                });
+                input.addEventListener('blur', function() { atualizarPrevia(); });
+            });
+
+            // Event Listener para a foto (ATUALIZADO)
+            produtoFotoInput.addEventListener('change', function(e) {
+                limparErro('produtoFoto');
+                produtoFotoFile = null;
+                imagePreviewDiv.style.display = 'none';
+                previewImage.src = '#';
+                
+                // Resetar o visual do botão customizado
+                customFileUploadLabel.classList.remove('file-selected');
+                customFileUploadLabel.innerHTML = '<i class="fas fa-upload"></i> Escolher Arquivo';
+
+                if (this.files.length > 0) {
+                    const file = this.files[0];
+                    if (file.size > MAX_FILE_SIZE_BYTES) {
+                        mostrarErro('produtoFoto', `O arquivo excede o limite de ${MAX_FILE_SIZE_MB}MB.`);
+                        this.value = ''; // Limpa o input
+                        return;
+                    }
+                    if (!file.type.startsWith('image/')) {
+                        mostrarErro('produtoFoto', 'Por favor, selecione um arquivo de imagem válido.');
+                        this.value = ''; // Limpa o input
+                        return;
+                    }
+                    produtoFotoFile = file;
+
+                    // Atualiza o visual do botão customizado
+                    customFileUploadLabel.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name}`;
+                    customFileUploadLabel.classList.add('file-selected');
+
+                    // Cria prévia da imagem
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        previewImage.src = event.target.result;
+                        imagePreviewDiv.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // ... (Event Listeners de Tecido e Aviamento) ...
+            tipoTecidoInput.addEventListener('input', function() {
+                const busca = this.value.toLowerCase();
+                const opcoes = tecidosList.querySelectorAll('.tecido-option');
+                if (busca) {
+                    tecidosList.classList.add('active');
+                    opcoes.forEach(opcao => {
+                        const texto = opcao.textContent.toLowerCase();
+                        if (texto.includes(busca)) opcao.style.display = 'flex';
+                        else opcao.style.display = 'none';
+                    });
+                    const categorias = tecidosList.querySelectorAll('.tecidos-category');
+                    categorias.forEach(categoria => {
+                        let temOpcaoVisivel = false;
+                        let proximo = categoria.nextElementSibling;
+                        while (proximo && !proximo.classList.contains('tecidos-category')) {
+                            if (proximo.style.display !== 'none') { temOpcaoVisivel = true; break; }
+                            proximo = proximo.nextElementSibling;
+                        }
+                        categoria.style.display = temOpcaoVisivel ? 'block' : 'none';
+                    });
+                } else {
+                    opcoes.forEach(opcao => opcao.style.display = 'flex');
+                    const categorias = tecidosList.querySelectorAll('.tecidos-category');
+                    categorias.forEach(categoria => categoria.style.display = 'block');
+                }
+                limparErro('tipoTecido');
+            });
+            
+            tipoTecidoInput.addEventListener('focus', function() { tecidosList.classList.add('active'); });
+            document.addEventListener('click', function(e) {
+                if (!tipoTecidoInput.contains(e.target) && !tecidosList.contains(e.target)) tecidosList.classList.remove('active');
+            });
+            
+            temAviamentosCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    aviamentosSection.style.display = 'block';
+                    if (aviamentoCount === 0) adicionarAviamento();
+                } else {
+                    aviamentosSection.style.display = 'none';
+                }
+                atualizarPrevia();
+            });
+            
+            adicionarAviamentoBtn.addEventListener('click', adicionarAviamento);
+            
+            function adicionarAviamento() {
+                if (aviamentoCount >= maxAviamentos) {
+                    mostrarAlerta(`Máximo de ${maxAviamentos} aviamentos permitidos.`, 'error');
+                    return;
+                }
+                aviamentoCount++;
+                const aviamentoItem = document.createElement('div');
+                aviamentoItem.className = 'aviamento-item';
+                aviamentoItem.innerHTML = `
+                    <div class="aviamento-header">
+                        <div class="aviamento-title"><i class="fas fa-paperclip"></i><h4>Aviamento ${aviamentoCount}</h4></div>
+                        <button type="button" class="remove-aviamento"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Nome</label>
+                        <div class="input-with-icon"><i class="fas fa-pen input-icon"></i><input type="text" class="aviamento-nome" placeholder="Ex: Linha"></div>
+                    </div>
+                    <div class="tipo-aviamento">
+                        <label><i class="fas fa-calculator"></i> Tipo</label>
+                        <div class="input-with-icon"><i class="fas fa-cog input-icon"></i>
+                            <select class="tipo-aviamento-select"><option value="metro">Por Metro</option><option value="unidade">Por Unidade</option></select>
+                        </div>
+                    </div>
+                    <div class="grid-3 campos-por-metro">
+                        <div class="form-group"><label>Valor Pago</label><div class="input-with-icon"><i class="fas fa-money-bill-wave input-icon"></i><input type="text" class="money-input aviamento-valor" placeholder="0,00"></div></div>
+                        <div class="form-group"><label>Total (m)</label><div class="input-with-icon"><i class="fas fa-tape input-icon"></i><input type="text" class="number-input aviamento-metros-total" placeholder="0,00"></div></div>
+                        <div class="form-group"><label>Usado (m)</label><div class="input-with-icon"><i class="fas fa-ruler-vertical input-icon"></i><input type="text" class="number-input aviamento-metros-utilizados" placeholder="0,00"></div></div>
+                    </div>
+                    <div class="grid-2 campos-por-unidade" style="display: none;">
+                        <div class="form-group"><label>Valor Unit.</label><div class="input-with-icon"><i class="fas fa-money-bill-wave input-icon"></i><input type="text" class="money-input aviamento-valor-unidade" placeholder="0,00"></div></div>
+                        <div class="form-group"><label>Qtd Usada</label><div class="input-with-icon"><i class="fas fa-boxes input-icon"></i><input type="number" class="aviamento-unidades-utilizadas" step="1" min="0" placeholder="0"></div></div>
+                    </div>
+                    <div class="aviamento-calc-info"></div>
+                `;
+                aviamentosContainer.appendChild(aviamentoItem);
+                
+                // Event bindings for new item
+                aviamentoItem.querySelectorAll('.money-input').forEach(input => input.addEventListener('input', function() { if(this.value) this.value=formatarMoeda(this.value); atualizarPrevia(); atualizarInfoAviamento(aviamentoItem); }));
+                aviamentoItem.querySelectorAll('.number-input').forEach(input => input.addEventListener('input', function() { this.value=this.value.replace(/[^\d,.]/g, ''); atualizarPrevia(); atualizarInfoAviamento(aviamentoItem); }));
+                aviamentoItem.querySelectorAll('input, select').forEach(input => input.addEventListener('change', function() { atualizarPrevia(); atualizarInfoAviamento(aviamentoItem); }));
+                
+                const tipoSelect = aviamentoItem.querySelector('.tipo-aviamento-select');
+                tipoSelect.addEventListener('change', function() {
+                    const camposMetro = aviamentoItem.querySelector('.campos-por-metro');
+                    const camposUnidade = aviamentoItem.querySelector('.campos-por-unidade');
+                    if (this.value === 'metro') { camposMetro.style.display = 'grid'; camposUnidade.style.display = 'none'; }
+                    else { camposMetro.style.display = 'none'; camposUnidade.style.display = 'grid'; }
+                    atualizarPrevia(); atualizarInfoAviamento(aviamentoItem);
+                });
+                
+                aviamentoItem.querySelector('.remove-aviamento').addEventListener('click', function() {
+                    aviamentosContainer.removeChild(aviamentoItem);
+                    aviamentoCount--;
+                    atualizarPrevia();
+                });
+            }
+            
+            function atualizarInfoAviamento(aviamentoItem) {
+                const calcInfo = aviamentoItem.querySelector('.aviamento-calc-info');
+                const tipo = aviamentoItem.querySelector('.tipo-aviamento-select').value;
+                if (tipo === 'metro') {
+                    const valor = parseMoeda(aviamentoItem.querySelector('.aviamento-valor').value) || 0;
+                    const total = parseNumero(aviamentoItem.querySelector('.aviamento-metros-total').value) || 0;
+                    const usado = parseNumero(aviamentoItem.querySelector('.aviamento-metros-utilizados').value) || 0;
+                    if (valor > 0 && total > 0 && usado >= 0) {
+                        const custo = (valor / total) * usado;
+                        calcInfo.innerHTML = `<strong>Custo: R$ ${custo.toFixed(4)}</strong>`;
+                        calcInfo.classList.add('active');
+                    } else calcInfo.classList.remove('active');
+                } else {
+                    const valor = parseMoeda(aviamentoItem.querySelector('.aviamento-valor-unidade').value) || 0;
+                    const usado = parseFloat(aviamentoItem.querySelector('.aviamento-unidades-utilizadas').value) || 0;
+                    if (valor > 0 && usado > 0) {
+                        calcInfo.innerHTML = `<strong>Custo: R$ ${(valor * usado).toFixed(2)}</strong>`;
+                        calcInfo.classList.add('active');
+                    } else calcInfo.classList.remove('active');
+                }
+            }
+            
+            const camposPrincipais = ['nomeProduto', 'valorTotalTecido', 'comprimentoTotalTecido', 'metragemUtilizada', 'valorHora', 'tempoGasto', 'valorEmbalagem', 'porcentagemLucro', 'custoTransporte', 'quantidadeProdutos', 'larguraTecido'];
+            camposPrincipais.forEach(id => {
+                const campo = document.getElementById(id);
+                if (campo) {
+                    campo.addEventListener('input', atualizarPrevia);
+                    campo.addEventListener('blur', atualizarPrevia);
+                }
+            });
+
+            // --- Lógica Principal de Cálculo ---
+            
+            function atualizarPrevia() {
+                try {
+                    // Valores de Input
+                    const qtdProdutos = parseNumero(document.getElementById('quantidadeProdutos').value) || 1;
+                    const valorTotalTecido = parseMoeda(document.getElementById('valorTotalTecido').value) || 0;
+                    const comprimentoTotal = parseNumero(document.getElementById('comprimentoTotalTecido').value) || 0;
+                    const metragemUtilizada = parseNumero(document.getElementById('metragemUtilizada').value) || 0;
+                    const valorHora = parseMoeda(document.getElementById('valorHora').value) || 0;
+                    const tempoGasto = parseNumero(document.getElementById('tempoGasto').value) || 0;
+                    const valorEmbalagemTotal = parseMoeda(document.getElementById('valorEmbalagem').value) || 0; // Valor TOTAL do Lote
+                    const custoTransporte = parseMoeda(document.getElementById('custoTransporte').value) || 0; // Unitário
+                    
+                    // 1. Custo Tecido Unitário
+                    let custoTecido = 0;
+                    if (comprimentoTotal > 0) {
+                        custoTecido = (valorTotalTecido / comprimentoTotal) * metragemUtilizada;
+                        if (valorTotalTecido > 0 && metragemUtilizada > 0) {
+                            tecidoCalcInfo.style.display = 'block';
+                            tecidoCalcInfo.innerHTML = `(R$ ${valorTotalTecido.toFixed(2)} ÷ ${comprimentoTotal} cm) × ${metragemUtilizada} cm = R$ ${custoTecido.toFixed(2)}`;
+                        } else {
+                            tecidoCalcInfo.style.display = 'none';
+                        }
+                    } else {
+                        tecidoCalcInfo.style.display = 'none';
+                    }
+                    
+                    // 2. Custo Mão de Obra Unitário
+                    const custoMaoDeObra = (tempoGasto / 60) * valorHora;
+                    
+                    // 3. Custo Aviamentos Unitário
+                    let custoAviamentos = 0;
+                    if (temAviamentosCheckbox.checked) {
+                        document.querySelectorAll('.aviamento-item').forEach(item => {
+                            const tipo = item.querySelector('.tipo-aviamento-select').value;
+                            if (tipo === 'metro') {
+                                const v = parseMoeda(item.querySelector('.aviamento-valor').value) || 0;
+                                const t = parseNumero(item.querySelector('.aviamento-metros-total').value) || 1;
+                                const u = parseNumero(item.querySelector('.aviamento-metros-utilizados').value) || 0;
+                                custoAviamentos += (v / t) * u;
+                            } else {
+                                const v = parseMoeda(item.querySelector('.aviamento-valor-unidade').value) || 0;
+                                const u = parseFloat(item.querySelector('.aviamento-unidades-utilizadas').value) || 0;
+                                custoAviamentos += v * u;
+                            }
+                        });
+                    }
+                    
+                    // 4. Custo Embalagem Unitário (Lógica Atualizada: Fixo/Quantidade)
+                    const custoEmbalagemUnitario = valorEmbalagemTotal / (qtdProdutos || 1);
+                    
+                    // 5. Custo Unitário Total
+                    const baseLucro = custoTecido + custoAviamentos;
+                    const custoMateriaisParaCalculoTotal = baseLucro + custoEmbalagemUnitario + custoTransporte;
+                    const custoTotalUnitario = custoMateriaisParaCalculoTotal + custoMaoDeObra;
+                    
+                    // Atualizar Prévia HTML
+                    previaDetalhes.innerHTML = `
+                        <div class="previa-section-header">Custos de Materiais (Base para Lucro: R$ ${baseLucro.toFixed(2)})</div>
+                        <div class="previa-item"><span>Tecido:</span><span>R$ ${custoTecido.toFixed(2)}</span></div>
+                        <div class="previa-item"><span>Aviamentos:</span><span>R$ ${custoAviamentos.toFixed(2)}</span></div>
+                        <div class="previa-item highlight" style="border-top:1px dashed #ccc; margin-top:5px; padding-top:5px; margin-bottom: 5px;">
+                            <span>Base de Lucro (Tecido + Aviamentos):</span><span>R$ ${baseLucro.toFixed(2)}</span>
+                        </div>
+                        <div class="previa-item">
+                            <span>Embalagem (Unitário: R$ ${valorEmbalagemTotal.toFixed(2)} / ${qtdProdutos} un):</span>
+                            <span>R$ ${custoEmbalagemUnitario.toFixed(2)}</span>
+                        </div>
+                        <div class="previa-item"><span>Transporte (Unitário):</span><span>R$ ${custoTransporte.toFixed(2)}</span></div>
+                        <div class="previa-item highlight" style="border-top:1px dashed #ccc; margin-top:5px; padding-top:5px;">
+                            <span>Custo Total Materiais (Unitário):</span><span>R$ ${(custoMateriaisParaCalculoTotal).toFixed(2)}</span>
+                        </div>
+
+                        <div class="previa-section-header">Custos de Mão de Obra</div>
+                        <div class="previa-item"><span>Mão de Obra:</span><span>R$ ${custoMaoDeObra.toFixed(2)}</span></div>
+
+                        <div class="previa-total">
+                            <span>Custo Unitário Total:</span>
+                            <span>R$ ${custoTotalUnitario.toFixed(2)}</span>
+                        </div>
+                    `;
+                } catch (error) { console.error(error); }
+            }
+            
+            function getAviamentosData() {
+                const aviamentosData = [];
+                if (temAviamentosCheckbox.checked) {
+                    document.querySelectorAll('.aviamento-item').forEach(item => {
+                        const nome = item.querySelector('.aviamento-nome').value || `Aviamento`;
+                        const tipo = item.querySelector('.tipo-aviamento-select').value;
+                        let custo = 0;
+                        let detalhes = {};
+
+                        if (tipo === 'metro') {
+                            const v = parseMoeda(item.querySelector('.aviamento-valor').value);
+                            const t = parseNumero(item.querySelector('.aviamento-metros-total').value);
+                            const u = parseNumero(item.querySelector('.aviamento-metros-utilizados').value);
+                            custo = (v / t) * u;
+                            detalhes = { valor_total: v, metros_total: t, metros_utilizados: u };
+                        } else {
+                            const v = parseMoeda(item.querySelector('.aviamento-valor-unidade').value);
+                            const u = parseFloat(item.querySelector('.aviamento-unidades-utilizadas').value);
+                            custo = v * u;
+                            detalhes = { valor_unitario: v, unidades_utilizadas: u };
+                        }
+                        aviamentosData.push({ nome, tipo, custo_unitario: custo, detalhes });
+                    });
+                }
+                return aviamentosData;
+            }
+
+            // --- Lógica de Salvar no Backend (ATUALIZADA) ---
+
+            salvarDadosBtn.addEventListener('click', salvarDados);
+
+            async function salvarDados() {
+                if (!ultimoResultadoCalculado) {
+                    mostrarAlerta('Por favor, calcule o custo primeiro.', 'error');
+                    return;
+                }
+
+                salvarDadosBtn.disabled = true;
+                const originalContent = salvarDadosBtn.innerHTML;
+                
+                // 1. Feedback Visual de Acordar o Servidor
+                salvarDadosBtn.innerHTML = '<i class="fas fa-bed fa-spin"></i> Acordando Servidor (máx. 40s)...';
+
+                try {
+                    const formData = new FormData();
+                    
+                    // Adiciona os dados JSON do cálculo
+                    formData.append('data', JSON.stringify(ultimoResultadoCalculado));
+
+                    // Adiciona o arquivo de foto, se existir
+                    if (produtoFotoFile) {
+                        formData.append('produtoFoto', produtoFotoFile);
+                    }
+
+                    // 2. Feedback Visual de Salvamento
+                    // Este feedback acontece após o primeiro 'ping' da requisição (que acorda o servidor)
+                    // e antes da resposta final.
+                    salvarDadosBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando Dados...';
+
+                    // 3. Envia a requisição para o backend
+                    const response = await fetch(SAVE_ENDPOINT, {
+                        method: 'POST',
+                        body: formData,
+                        // Adicionar um timeout pode ser útil, mas o Render lida com o tempo.
+                        // Aqui, confiamos no timeout de 40s do Render.
+                    });
+
+                    if (!response.ok) {
+                        let errorDetails = `Erro no servidor: ${response.status} ${response.statusText}.`;
+                        try {
+                            const errorData = await response.json();
+                            errorDetails += ` Detalhes: ${errorData.message || JSON.stringify(errorData)}`;
+                        } catch (e) {
+                            errorDetails += ' Resposta não é JSON.';
+                        }
+                        throw new Error(errorDetails);
+                    }
+
+                    const result = await response.json();
+
+                    // 4. Feedback de Sucesso
+                    mostrarAlerta(`Dados de "${ultimoResultadoCalculado.nome_produto}" salvos com sucesso! (ID: ${result.id || 'N/A'})`, 'success');
+                    
+                    // Altera o botão permanentemente (ou até o próximo cálculo)
+                    salvarDadosBtn.innerHTML = '<i class="fas fa-check-circle"></i> SALVO NO BANCO';
+                    salvarDadosBtn.classList.remove('btn-success');
+                    salvarDadosBtn.style.backgroundColor = 'var(--success-color)';
+                    salvarDadosBtn.disabled = true;
+
+                } catch (error) {
+                    console.error('Erro ao salvar no Backend:', error);
+                    const errorMessage = error.message.includes('fetch') ? 'Falha na conexão ou servidor inativo. Tente novamente.' : error.message || 'Falha ao salvar. Verifique o console.';
+                    
+                    // 5. Feedback de Erro
+                    mostrarAlerta(`ERRO: ${errorMessage}`, 'error');
+                    salvarDadosBtn.innerHTML = `<i class="fas fa-redo"></i> Erro. Tentar Novamente`;
+                    salvarDadosBtn.classList.add('btn-success'); // Retorna ao estilo original
+                    salvarDadosBtn.disabled = false;
+                } finally {
+                    salvarDadosBtn.disabled = false;
+                    // Se o botão já foi setado para SALVO, não sobrescrever. Se foi setado para erro, também não.
+                    if (!salvarDadosBtn.innerHTML.includes('SALVO') && !salvarDadosBtn.innerHTML.includes('Erro')) {
+                         salvarDadosBtn.innerHTML = originalContent;
+                    }
+                }
+            }
+
+
+            // --- Event Listener do Botão Calcular ---
+            
+            calcularBtn.addEventListener('click', function() {
+                ultimoResultadoCalculado = null;
+                salvarDadosBtn.style.display = 'none';
+
+                try {
+                    if (!validarCampos()) { 
+                        mostrarAlerta('Corrija os erros. Certifique-se de que a quantidade de produtos seja maior que zero para o cálculo da embalagem unitária.', 'error'); 
+                        resultadoDiv.style.display = 'none';
+                        return; 
+                    }
+                    
+                    const nomeProduto = document.getElementById('nomeProduto').value;
+                    const qtdProdutos = parseNumero(document.getElementById('quantidadeProdutos').value);
+                    const valorTotalTecido = parseMoeda(document.getElementById('valorTotalTecido').value);
+                    const comprimentoTotal = parseNumero(document.getElementById('comprimentoTotalTecido').value);
+                    const metragemUtilizada = parseNumero(document.getElementById('metragemUtilizada').value);
+                    const valorHora = parseMoeda(document.getElementById('valorHora').value);
+                    const tempoGasto = parseNumero(document.getElementById('tempoGasto').value);
+                    const valorEmbalagemTotal = parseMoeda(document.getElementById('valorEmbalagem').value); // TOTAL LOTE
+                    const custoTransporte = parseMoeda(document.getElementById('custoTransporte').value); // UNITÁRIO
+                    const porcentagemLucro = parseNumero(document.getElementById('porcentagemLucro').value);
+                    
+                    // CÁLCULO UNITÁRIO
+                    const custoTecido = (valorTotalTecido / comprimentoTotal) * metragemUtilizada;
+                    const custoMaoDeObra = (tempoGasto / 60) * valorHora;
+                    
+                    let custoAviamentos = 0;
+                    let detalhesAviamentos = '';
+                    if (temAviamentosCheckbox.checked) {
+                        document.querySelectorAll('.aviamento-item').forEach(item => {
+                            const nome = item.querySelector('.aviamento-nome').value || `Aviamento`;
+                            const tipo = item.querySelector('.tipo-aviamento-select').value;
+                            let custo = 0;
+                            if (tipo === 'metro') {
+                                const v = parseMoeda(item.querySelector('.aviamento-valor').value);
+                                const t = parseNumero(item.querySelector('.aviamento-metros-total').value);
+                                const u = parseNumero(item.querySelector('.aviamento-metros-utilizados').value);
+                                custo = (v / t) * u;
+                            } else {
+                                const v = parseMoeda(item.querySelector('.aviamento-valor-unidade').value);
+                                const u = parseFloat(item.querySelector('.aviamento-unidades-utilizadas').value);
+                                custo = v * u;
+                            }
+                            custoAviamentos += custo;
+                            detalhesAviamentos += `<div class="resultado-item" style="font-size:0.9em; padding-left:20px;"><span>${nome}:</span><span>R$ ${custo.toFixed(2)}</span></div>`;
+                        });
+                    }
+                    
+                    // Novo Custo Unitário de Embalagem
+                    const custoEmbalagemUnitario = valorEmbalagemTotal / (qtdProdutos || 1); 
+
+                    // Lógica Final Unitária
+                    const baseLucro = custoTecido + custoAviamentos; // Lucro incide SÓ sobre Tecido + Aviamentos
+                    const valorLucroUnitario = baseLucro * (porcentagemLucro / 100);
+
+                    const custoOutrosUnitario = custoEmbalagemUnitario + custoTransporte;
+                    const custoMateriais = baseLucro + custoOutrosUnitario; // Custo Total de Materiais (a ser coberto)
+                    
+                    const valorVendaUnitario = custoMateriais + valorLucroUnitario + custoMaoDeObra;
+                    
+                    // CÁLCULO TOTAL (Lote)
+                    const custoTecidoTotal = custoTecido * qtdProdutos;
+                    const custoMOTotal = custoMaoDeObra * qtdProdutos;
+                    const custoEmbTotal = valorEmbalagemTotal; // O valor de input é o total FIXO
+                    const custoTranspTotal = custoTransporte * qtdProdutos;
+                    const custoAvTotal = custoAviamentos * qtdProdutos;
+                    const lucroTotal = valorLucroUnitario * qtdProdutos;
+                    const vendaTotal = valorVendaUnitario * qtdProdutos;
+
+                    resultadoDetalhes.innerHTML = `
+                        <div class="resultado-item"><span>Produto:</span><span>${nomeProduto}</span></div>
+                        <div class="resultado-item"><span>Quantidade no Lote:</span><span>${qtdProdutos}</span></div>
+                        
+                        <div class="resultado-item result-header" style="background:#f0f4ff; font-weight:bold; margin-top:10px;">Custo Unitário</div>
+                        <div class="resultado-item"><span>Base de Lucro (Tecido + Aviamentos):</span><span>R$ ${baseLucro.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Outros Custos (Emb + Transp):</span><span>R$ ${custoOutrosUnitario.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Mão de Obra:</span><span>R$ ${custoMaoDeObra.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Lucro (${porcentagemLucro}% s/ Base Lucro):</span><span>R$ ${valorLucroUnitario.toFixed(2)}</span></div>
+                        <div class="resultado-item" style="font-weight:bold; color:var(--success-color);"><span>Preço Venda Unitário:</span><span>R$ ${valorVendaUnitario.toFixed(2)}</span></div>
+
+                        <div class="resultado-item result-header" style="background:#e6fffa; font-weight:bold; margin-top:15px; border-top:2px solid #ccc;">Totais do Lote (${qtdProdutos} un)</div>
+                        <div class="resultado-item"><span>Total Tecido:</span><span>R$ ${custoTecidoTotal.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Total Aviamentos:</span><span>R$ ${custoAvTotal.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Total Mão de Obra:</span><span>R$ ${custoMOTotal.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Total Embalagem (Fixo):</span><span>R$ ${custoEmbTotal.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Total Transporte:</span><span>R$ ${custoTranspTotal.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Lucro Total:</span><span>R$ ${lucroTotal.toFixed(2)}</span></div>
+                        <div class="resultado-item resultado-total"><span>Valor Total da Venda:</span><span>R$ ${vendaTotal.toFixed(2)}</span></div>
+                    `;
+                    
+                    // Armazenar resultado para o envio
+                    ultimoResultadoCalculado = {
+                        nome_produto: nomeProduto,
+                        quantidade_produtos: qtdProdutos,
+                        tecido_tipo: tecidoSelecionado,
+                        custo_unitario_tecido: parseFloat(custoTecido.toFixed(2)),
+                        custo_unitario_aviamentos: parseFloat(custoAviamentos.toFixed(2)),
+                        custo_unitario_mo: parseFloat(custoMaoDeObra.toFixed(2)),
+                        custo_unitario_embalagem: parseFloat(custoEmbalagemUnitario.toFixed(2)),
+                        custo_unitario_transporte: parseFloat(custoTransporte.toFixed(2)),
+                        porcentagem_lucro: porcentagemLucro,
+                        lucro_unitario: parseFloat(valorLucroUnitario.toFixed(2)),
+                        preco_venda_unitario: parseFloat(valorVendaUnitario.toFixed(2)),
+                        // A URL da imagem será tratada e salva pelo backend
+                        aviamentos_data: getAviamentosData() // Envia como array de objetos
+                    };
+
+                    resultadoDiv.style.display = 'block';
+                    salvarDadosBtn.style.display = 'flex';
+                    // Resetar o botão de salvar para o estado inicial/não salvo
+                    salvarDadosBtn.disabled = false;
+                    salvarDadosBtn.innerHTML = '<i class="fas fa-save"></i> Salvar no Banco de Dados';
+                    salvarDadosBtn.style.backgroundColor = ''; // Remove o estilo de "SALVO"
+                    salvarDadosBtn.classList.add('btn-success');
+                    
+                    mostrarAlerta('Cálculo realizado com sucesso! Clique em Salvar para enviar ao Backend.', 'success');
+                    resultadoDiv.scrollIntoView({ behavior: 'smooth' });
+                } catch (error) { console.error(error); }
+            });
+            
+            // --- Event Listener para Limpar ---
+            form.addEventListener('reset', function() {
+                resultadoDiv.style.display = 'none';
+                aviamentosSection.style.display = 'none';
+                temAviamentosCheckbox.checked = false;
+                aviamentosContainer.innerHTML = '';
+                aviamentoCount = 0;
+                tecidoSelecionado = '';
+                tecidosSelected.classList.remove('active');
+                tecidoCalcInfo.style.display = 'none';
+                
+                // Resetar variáveis de estado/Foto
+                ultimoResultadoCalculado = null;
+                produtoFotoFile = null;
+                salvarDadosBtn.style.display = 'none';
+                imagePreviewDiv.style.display = 'none';
+                previewImage.src = '#';
+                
+                // Resetar o visual do botão customizado
+                customFileUploadLabel.classList.remove('file-selected');
+                customFileUploadLabel.innerHTML = '<i class="fas fa-upload"></i> Escolher Arquivo';
+                limparErro('produtoFoto'); // Garante que a classe de erro seja removida do container
+                
+                setTimeout(() => atualizarPrevia(), 0);
+            });
+            
+            // Inicializar
+            carregarTecidos();
+            atualizarPrevia();
+        });
+    </script>
+</body>
+</html>
