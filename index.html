@@ -36,8 +36,9 @@
             background: linear-gradient(135deg, #f5f7ff 0%, #e6eeff 100%);
             color: var(--text-dark);
             line-height: 1.6;
-            padding: 20px;
+            padding: 10px;
             min-height: 100vh;
+            font-size: 14px;
         }
         
         .container {
@@ -52,38 +53,39 @@
         header {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
         }
         
         h1 {
-            font-size: 2.2rem;
+            font-size: 1.6rem;
             margin-bottom: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         
         .header-icon {
             background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         
         .form-container {
-            padding: 30px;
+            padding: 20px;
         }
         
         .form-section {
             background-color: white;
             border-radius: var(--radius);
-            padding: 25px;
-            margin-bottom: 25px;
+            padding: 20px;
+            margin-bottom: 20px;
             box-shadow: var(--shadow);
             border-left: 4px solid var(--primary-color);
         }
@@ -92,34 +94,36 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             color: var(--primary-color);
-            font-size: 1.3rem;
+            font-size: 1.1rem;
         }
         
         .section-title i {
             background-color: var(--light-color);
             border-radius: 8px;
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 0.9rem;
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             position: relative;
         }
         
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
             color: var(--text-dark);
             display: flex;
             align-items: center;
             gap: 8px;
+            font-size: 0.9rem;
         }
         
         .input-with-icon {
@@ -128,19 +132,20 @@
         
         .input-icon {
             position: absolute;
-            left: 15px;
+            left: 12px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--gray-dark);
+            font-size: 0.9rem;
         }
         
         /* Estiliza input de texto/número/select */
         input:not([type="file"]):not([type="checkbox"]), select {
             width: 100%;
-            padding: 14px 15px 14px 45px;
+            padding: 12px 12px 12px 40px;
             border: 1px solid var(--gray-medium);
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 14px;
             transition: all 0.3s;
             background-color: var(--light-color);
         }
@@ -170,12 +175,12 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            padding: 14px 15px;
+            padding: 12px 15px;
             border: 2px dashed var(--primary-color); 
             border-radius: 8px;
             background-color: var(--light-color);
             color: var(--primary-color);
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -215,11 +220,12 @@
             align-items: center;
             justify-content: space-between;
             gap: 15px;
-            padding: 15px;
+            padding: 12px;
             background-color: var(--light-color);
             border-radius: var(--radius);
             font-weight: 600;
             cursor: pointer;
+            font-size: 0.9rem;
         }
 
         .toggle-switch label {
@@ -233,8 +239,8 @@
         .switch-label {
             position: relative;
             display: inline-block;
-            width: 60px;
-            height: 34px;
+            width: 50px;
+            height: 28px;
             margin-bottom: 0;
         }
 
@@ -260,8 +266,8 @@
         .slider:before {
             position: absolute;
             content: "";
-            height: 26px;
-            width: 26px;
+            height: 20px;
+            width: 20px;
             left: 4px;
             bottom: 4px;
             background-color: white;
@@ -275,7 +281,7 @@
         }
 
         input:checked + .slider:before {
-            transform: translateX(26px);
+            transform: translateX(22px);
         }
         /* FIM Toggle Switch */
 
@@ -305,20 +311,22 @@
         }
         
         .tecidos-category {
-            padding: 12px 15px;
+            padding: 10px 12px;
             background-color: var(--light-color);
             font-weight: bold;
             border-bottom: 1px solid var(--gray-medium);
             color: var(--primary-color);
+            font-size: 0.9rem;
         }
         
         .tecido-option {
-            padding: 10px 15px;
+            padding: 8px 12px;
             cursor: pointer;
             border-bottom: 1px solid var(--gray-light);
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 0.85rem;
         }
         
         .tecido-option:hover {
@@ -327,11 +335,12 @@
         
         .tecidos-selected {
             margin-top: 10px;
-            padding: 12px;
+            padding: 10px;
             background-color: var(--light-color);
             border-radius: 8px;
             display: none;
             border-left: 3px solid var(--primary-color);
+            font-size: 0.9rem;
         }
         
         .tecidos-selected.active {
@@ -342,8 +351,8 @@
         
         .aviamentos-section {
             display: none;
-            margin-top: 20px;
-            padding: 20px;
+            margin-top: 15px;
+            padding: 15px;
             background-color: var(--light-color);
             border-radius: 8px;
             border: 2px dashed var(--secondary-color);
@@ -351,9 +360,9 @@
         
         .aviamento-item {
             background-color: white;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             box-shadow: var(--shadow);
             border-left: 4px solid var(--accent-color);
         }
@@ -362,14 +371,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .aviamento-title {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             color: var(--accent-color);
+            font-size: 0.95rem;
         }
         
         .remove-aviamento {
@@ -377,14 +387,15 @@
             color: white;
             border: none;
             border-radius: 8px;
-            width: 36px;
-            height: 36px;
+            width: 30px;
+            height: 30px;
             cursor: pointer;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s;
+            font-size: 0.8rem;
         }
         
         .remove-aviamento:hover {
@@ -393,7 +404,7 @@
         }
         
         .tipo-aviamento {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .tipo-aviamento select {
@@ -403,27 +414,27 @@
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
         }
         
         .grid-3 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
         }
         
         .btn {
-            padding: 14px 24px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             transition: all 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
         }
         
         .btn-primary {
@@ -456,13 +467,14 @@
         
         .buttons {
             display: flex;
-            gap: 15px;
-            margin-top: 30px;
+            gap: 12px;
+            margin-top: 25px;
+            flex-wrap: wrap;
         }
         
         .previa {
-            margin-top: 30px;
-            padding: 25px;
+            margin-top: 25px;
+            padding: 20px;
             background: linear-gradient(135deg, #f8f9ff 0%, #e6eeff 100%);
             border-radius: var(--radius);
             border-left: 4px solid var(--primary-color);
@@ -470,27 +482,28 @@
         
         .previa h2 {
             color: var(--primary-color);
-            margin-bottom: 20px;
-            font-size: 1.3rem;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         
         .previa-section-header {
             font-weight: 700;
             color: var(--text-dark);
-            margin-top: 15px;
-            margin-bottom: 8px;
+            margin-top: 12px;
+            margin-bottom: 6px;
             border-bottom: 1px solid var(--gray-medium);
             padding-bottom: 5px;
+            font-size: 0.9rem;
         }
 
         .previa-item {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
-            font-size: 0.95em;
+            padding: 5px 0;
+            font-size: 0.85rem;
         }
 
         .previa-item.highlight {
@@ -500,16 +513,16 @@
         
         .previa-total {
             font-weight: bold;
-            font-size: 1.2em;
+            font-size: 1rem;
             color: var(--primary-color);
-            margin-top: 15px;
-            padding-top: 15px;
+            margin-top: 12px;
+            padding-top: 12px;
             border-top: 2px solid var(--primary-color);
         }
         
         .resultado {
-            margin-top: 30px;
-            padding: 25px;
+            margin-top: 25px;
+            padding: 20px;
             background: linear-gradient(135deg, #f0f4ff 0%, #e6eeff 100%);
             border-radius: var(--radius);
             display: none;
@@ -518,32 +531,33 @@
         
         .resultado h2 {
             color: var(--success-color);
-            margin-bottom: 20px;
-            font-size: 1.3rem;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         
         .resultado-item {
             display: flex;
             justify-content: space-between;
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid var(--gray-light);
+            font-size: 0.9rem;
         }
         
         .resultado-total {
             font-weight: bold;
-            font-size: 1.3em;
+            font-size: 1.1rem;
             color: var(--success-color);
-            margin-top: 15px;
-            padding-top: 15px;
+            margin-top: 12px;
+            padding-top: 12px;
             border-top: 2px solid var(--success-color);
         }
         
         .error-message {
             color: var(--error-color);
-            font-size: 0.9em;
+            font-size: 0.8rem;
             margin-top: 5px;
             display: none;
             align-items: center;
@@ -568,12 +582,13 @@
         }
         
         .alert {
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: none;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            font-size: 0.9rem;
         }
         
         .alert-error {
@@ -589,11 +604,11 @@
         }
         
         .aviamento-calc-info {
-            margin-top: 15px;
-            padding: 15px;
+            margin-top: 12px;
+            padding: 12px;
             background-color: var(--light-color);
             border-radius: 8px;
-            font-size: 0.9em;
+            font-size: 0.8rem;
             display: none;
             border-left: 3px solid var(--primary-color);
         }
@@ -605,48 +620,138 @@
         .calc-formula {
             font-family: monospace;
             background-color: white;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 6px;
-            margin: 8px 0;
+            margin: 6px 0;
             border: 1px solid var(--gray-medium);
+            font-size: 0.8rem;
         }
         
+        .calculation-example {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .highlight-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        /* Melhorias específicas para mobile */
+        .mobile-optimized {
+            /* Elementos com toque mais fácil */
+            touch-action: manipulation;
+        }
+
+        /* Ajustes para telas menores que 768px */
         @media (max-width: 768px) {
-            .grid-2, .grid-3 {
-                grid-template-columns: 1fr;
+            body {
+                padding: 5px;
+                font-size: 13px;
             }
             
             .container {
-                padding: 0;
+                border-radius: 10px;
+            }
+            
+            header {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.4rem;
+            }
+            
+            .header-icon {
+                width: 35px;
+                height: 35px;
             }
             
             .form-container {
-                padding: 20px;
+                padding: 15px;
+            }
+            
+            .form-section {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+                gap: 10px;
             }
             
             .buttons {
                 flex-direction: column;
             }
             
-            h1 {
-                font-size: 1.8rem;
+            .btn {
+                width: 100%;
+                padding: 14px 20px;
+            }
+            
+            input:not([type="file"]):not([type="checkbox"]), select {
+                padding: 14px 12px 14px 40px;
+            }
+            
+            .previa, .resultado {
+                padding: 15px;
+            }
+            
+            .tecidos-list {
+                position: relative;
+                max-height: 200px;
+            }
+            
+            .aviamento-item {
+                padding: 12px;
+            }
+            
+            .toggle-switch {
+                padding: 10px;
             }
         }
 
-        .calculation-example {
-            background-color: var(--light-color);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 10px;
-            font-size: 0.9em;
-            border-left: 3px solid var(--primary-color);
-        }
-
-        .highlight-info {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: 2px;
-            font-style: italic;
+        /* Ajustes para telas muito pequenas (menos de 480px) */
+        @media (max-width: 480px) {
+            body {
+                font-size: 12px;
+            }
+            
+            h1 {
+                font-size: 1.2rem;
+            }
+            
+            .header-icon {
+                width: 30px;
+                height: 30px;
+            }
+            
+            .form-container {
+                padding: 10px;
+            }
+            
+            .form-section {
+                padding: 12px;
+            }
+            
+            .section-title {
+                font-size: 1rem;
+            }
+            
+            .previa h2, .resultado h2 {
+                font-size: 1rem;
+            }
+            
+            .btn {
+                font-size: 13px;
+            }
         }
     </style>
 </head>
@@ -977,7 +1082,7 @@
     <script>
         // ** CONFIGURAÇÃO DO BACKEND (AJUSTADO) **
         const BACKEND_URL = 'https://backend-calculador.onrender.com';
-        const SAVE_ENDPOINT = `${BACKEND_URL}/api/products`; // Endpoint de exemplo para salvar
+        const SAVE_ENDPOINT = `${BACKEND_URL}/api/products`;
         
         const MAX_FILE_SIZE_MB = 5;
         const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // 5MB
@@ -1551,7 +1656,16 @@
                     const formData = new FormData();
                     
                     // Adiciona os dados JSON do cálculo
-                    formData.append('data', JSON.stringify(ultimoResultadoCalculado));
+                    const dadosParaEnvio = {
+                        ...ultimoResultadoCalculado,
+                        // Adicionando campos que estavam faltando para o banco
+                        valor_total_tecido: parseMoeda(document.getElementById('valorTotalTecido').value),
+                        comprimento_total_tecido: parseNumero(document.getElementById('comprimentoTotalTecido').value),
+                        largura_tecido: parseNumero(document.getElementById('larguraTecido').value),
+                        metragem_utilizada: parseNumero(document.getElementById('metragemUtilizada').value)
+                    };
+                    
+                    formData.append('data', JSON.stringify(dadosParaEnvio));
 
                     // Adiciona o arquivo de foto, se existir
                     if (produtoFotoFile) {
@@ -1559,16 +1673,12 @@
                     }
 
                     // 2. Feedback Visual de Salvamento
-                    // Este feedback acontece após o primeiro 'ping' da requisição (que acorda o servidor)
-                    // e antes da resposta final.
                     salvarDadosBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando Dados...';
 
                     // 3. Envia a requisição para o backend
                     const response = await fetch(SAVE_ENDPOINT, {
                         method: 'POST',
                         body: formData,
-                        // Adicionar um timeout pode ser útil, mas o Render lida com o tempo.
-                        // Aqui, confiamos no timeout de 40s do Render.
                     });
 
                     if (!response.ok) {
@@ -1610,7 +1720,6 @@
                     }
                 }
             }
-
 
             // --- Event Listener do Botão Calcular ---
             
