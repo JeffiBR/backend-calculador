@@ -14,35 +14,40 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Middleware
 app.use(cors());
-// Mantém express.json() para outras rotas, mas o Multer lida com 'multipart/form-data'
-app.use(express.json()); 
+app.use(express.json());
 
 // Configuração do Multer (Upload de memória)
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  }
+});
 
 // Rota de Healthcheck (Para acordar o servidor)
 app.get('/api/wake-up', (req, res) => {
     res.status(200).json({ message: "Servidor acordado e pronto!" });
 });
 
-// Rota de Salvamento (CORRIGIDA)
-app.post('/api/products', upload.single('foto'), async (req, res) => {
+// Rota de Salvamento - CORRIGIDA
+app.post('/api/products', upload.single('produtoFoto'), async (req, res) => {
     try {
-        // CORREÇÃO ESSENCIAL: Verifica se o campo 'dados' existe
-        if (!req.body.dados) {
-            console.error("Erro: Campo 'dados' não encontrado no corpo da requisição.");
-            // Retorna um 400 com JSON explícito.
-            return res.status(400).json({ error: "Dados do produto (campo 'dados') estão ausentes. Verifique o envio do FormData no frontend." });
-        }
+        console.log('Recebendo requisição para salvar produto...');
         
-        // Tenta analisar o JSON após a verificação
-        const dados = JSON.parse(req.body.dados);
+        if (!req.body.data) {
+            return res.status(400).json({ error: "Dados do produto não fornecidos" });
+        }
+
+        const dados = JSON.parse(req.body.data);
         const file = req.file;
         let publicUrl = null;
 
-        // 1. Upload da Imagem (se houver)
+        console.log('Dados recebidos:', dados.nome_produto);
+
+        // 1. Upload da Imagem (se houver) - CORRIGIDO: campo 'produtoFoto'
         if (file) {
+            console.log('Processando upload de imagem...');
             const fileName = `foto_${Date.now()}_${file.originalname.replace(/\s/g, '_')}`;
             
             const { data: uploadData, error: uploadError } = await supabase
@@ -52,7 +57,10 @@ app.post('/api/products', upload.single('foto'), async (req, res) => {
                     contentType: file.mimetype
                 });
 
-            if (uploadError) throw uploadError;
+            if (uploadError) {
+                console.error('Erro no upload da imagem:', uploadError);
+                throw uploadError;
+            }
 
             // Gerar URL pública
             const { data: urlData } = supabase
@@ -61,26 +69,90 @@ app.post('/api/products', upload.single('foto'), async (req, res) => {
                 .getPublicUrl(fileName);
             
             publicUrl = urlData.publicUrl;
+            console.log('Imagem salva com URL:', publicUrl);
         }
 
-        // 2. Salvar no Banco de Dados
+        // 2. Mapear dados do frontend para a estrutura da tabela - CORRIGIDO
+        const dadosParaInserir = {
+            nome_produto: dados.nome_produto,
+            imagem_url: publicUrl,
+            
+            // Dados do tecido
+            tipo_tecido: dados.tecido_tipo,
+            valor_total_tecido: dados.valor_total_tecido, // Adicione este campo no frontend se necessário
+            comprimento_total_tecido: dados.comprimento_total_tecido, // Adicione este campo
+            largura_tecido: dados.largura_tecido, // Adicione este campo
+            metragem_utilizada: dados.metragem_utilizada, // Adicione este campo
+            
+            // Custos unitários
+            custo_tecido: dados.custo_unitario_tecido,
+            custo_mao_obra: dados.custo_unitario_mo,
+            custo_embalagem: dados.custo_unitario_embalagem,
+            custo_transporte: dados.custo_unitario_transporte,
+            custo_aviamentos: dados.custo_unitario_aviamentos,
+            
+            // Lucro e preço
+            porcentagem_lucro: dados.porcentagem_lucro,
+            valor_lucro: dados.lucro_unitario,
+            preco_venda_final: dados.preco_venda_unitario,
+            
+            // Lote
+            quantidade_lote: dados.quantidade_produtos,
+            valor_total_lote: dados.preco_venda_unitario * dados.quantidade_produtos,
+            
+            // Detalhes adicionais
+            custo_materiais: dados.custo_unitario_tecido + dados.custo_unitario_aviamentos,
+            custo_producao_total: dados.custo_unitario_tecido + dados.custo_unitario_aviamentos + 
+                                 dados.custo_unitario_mo + dados.custo_unitario_embalagem + 
+                                 dados.custo_unitario_transporte,
+            
+            // Aviamentos em JSON
+            detalhes_aviamentos: dados.aviamentos_data || []
+        };
+
+        console.log('Inserindo no banco de dados:', dadosParaInserir.nome_produto);
+
+        // 3. Salvar no Banco de Dados
         const { data, error } = await supabase
             .from('products')
-            .insert([
-                {
-                    ...dados,
-                    imagem_url: publicUrl
-                }
-            ]);
+            .insert([dadosParaInserir])
+            .select(); // Adiciona .select() para retornar os dados inseridos
+
+        if (error) {
+            console.error('Erro ao inserir no Supabase:', error);
+            throw error;
+        }
+
+        console.log('Produto salvo com sucesso! ID:', data[0]?.id);
+
+        res.status(200).json({ 
+            message: "Produto salvo com sucesso!", 
+            id: data[0]?.id,
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("Erro completo ao salvar:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Nova rota para listar produtos (para teste)
+app.get('/api/products', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        res.status(200).json({ message: "Produto salvo com sucesso!", data });
-
+        res.status(200).json(data);
     } catch (error) {
-        // O bloco catch garante que qualquer outro erro (como falha no Supabase) 
-        // retorne um 500 formatado em JSON
-        console.error("Erro ao salvar:", error);
+        console.error('Erro ao buscar produtos:', error);
         res.status(500).json({ error: error.message });
     }
 });
