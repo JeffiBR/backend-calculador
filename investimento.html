@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Investimentos - Ateliê</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilos do Menu - Copiados do Dashboard */
+        :root {
+            --primary-color: #5d78ff;
+            --secondary-color: #8a9bff;
+            --accent-color: #ff6b8b;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --error-color: #f44336;
+            --light-color: #f8f9ff;
+            --dark-color: #2d3748;
+            --gray-light: #f1f3f9;
+            --gray-medium: #e2e8f0;
+            --text-light: #718096;
+            --text-dark: #2d3748;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --radius: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7ff 0%, #e6eeff 100%);
+            color: var(--text-dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 0 0 var(--radius) var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .nav-link {
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+        }
+        
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+        
+        .mobile-nav {
+            display: none;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+        
+        .mobile-nav.active {
+            display: block;
+        }
+        
+        .mobile-nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .mobile-nav-link {
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .mobile-nav-link:hover, .mobile-nav-link.active {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+        }
+        
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        /* Estilos da Calculadora - Adaptados */
+        .form-container {
+            padding: 20px;
+        }
+        
+        .form-section {
+            background-color: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+        
+        .section-title i {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-dark);
+            font-size: 0.9rem;
+        }
+        
+        /* Estiliza input de texto/número/select */
+        input:not([type="file"]):not([type="checkbox"]), select {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border: 1px solid var(--gray-medium);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background-color: var(--light-color);
+        }
+        
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(93, 120, 255, 0.2);
+            background-color: white;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(93, 120, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: var(--gray-light);
+            color: var(--text-dark);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--gray-medium);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #3d8b40;
+        }
+        
+        .btn-danger {
+            background-color: var(--error-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .previa {
+            margin-top: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e6eeff 100%);
+            border-radius: var(--radius);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .previa h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .previa-section-header {
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-top: 12px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid var(--gray-medium);
+            padding-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .previa-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 0.85rem;
+        }
+
+        .previa-item.highlight {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .previa-total {
+            font-weight: bold;
+            font-size: 1rem;
+            color: var(--primary-color);
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 2px solid var(--primary-color);
+        }
+        
+        .resultado {
+            margin-top: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e6eeff 100%);
+            border-radius: var(--radius);
+            display: none;
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .resultado h2 {
+            color: var(--success-color);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .resultado-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--gray-light);
+            font-size: 0.9rem;
+        }
+        
+        .resultado-total {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--success-color);
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 2px solid var(--success-color);
+        }
+        
+        .error-message {
+            color: var(--error-color);
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: none;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .error-message.active {
+            display: flex;
+        }
+        
+        .input-error input:not([type="file"]):not([type="checkbox"]),
+        .input-error select {
+            border-color: var(--error-color);
+            background-color: #fff5f5 !important;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .alert-error {
+            background-color: #fff5f5;
+            color: var(--error-color);
+            border: 1px solid #fed7d7;
+        }
+        
+        .alert-success {
+            background-color: #f0fff4;
+            color: var(--success-color);
+            border: 1px solid #c6f6d5;
+        }
+        
+        .highlight-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        /* Campos específicos para investimentos */
+        .categoria-campos {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            border: 2px dashed var(--secondary-color);
+        }
+        
+        .categoria-campos.active {
+            display: block;
+        }
+
+        /* Lista de itens adicionados */
+        .itens-adicionados {
+            margin-top: 20px;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .itens-adicionados-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .itens-lista {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .item-lista {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--gray-light);
+            background-color: white;
+        }
+
+        .item-lista:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-nome {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .item-detalhes {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .item-acoes {
+            display: flex;
+            gap: 8px;
+        }
+
+        .item-remover {
+            background: none;
+            border: none;
+            color: var(--error-color);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .item-remover:hover {
+            background-color: #ffebee;
+        }
+
+        /* Campos de parcelamento */
+        .parcelamento-campos {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            border-left: 3px solid var(--warning-color);
+        }
+
+        .parcelamento-campos.active {
+            display: block;
+        }
+
+        .parcelas-lista {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .parcela-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .parcela-pendente {
+            border-left: 3px solid var(--warning-color);
+        }
+
+        .parcela-paga {
+            border-left: 3px solid var(--success-color);
+            opacity: 0.7;
+        }
+
+        /* Campo personalizado para outros tipos */
+        .outro-campo {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .outro-campo.active {
+            display: block;
+        }
+
+        /* Responsive - Menu */
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+        }
+        
+        /* Ajustes para telas menores que 768px */
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 15px;
+            }
+            
+            .form-section {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                padding: 14px 20px;
+            }
+            
+            input:not([type="file"]):not([type="checkbox"]), select {
+                padding: 14px 12px 14px 40px;
+            }
+            
+            .previa, .resultado {
+                padding: 15px;
+            }
+        }
+
+        /* Ajustes para telas muito pequenas (menos de 480px) */
+        @media (max-width: 480px) {
+            .form-container {
+                padding: 10px;
+            }
+            
+            .form-section {
+                padding: 12px;
+            }
+            
+            .section-title {
+                font-size: 1rem;
+            }
+            
+            .previa h2, .resultado h2 {
+                font-size: 1rem;
+            }
+            
+            .btn {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header - Igual ao Dashboard -->
+    <div class="header">
+        <h1>
+            <i class="fas fa-money-bill-wave"></i>
+            Registro de Investimentos
+        </h1>
+        
+        <div class="nav-links">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-chart-line"></i>
+                Dashboard
+            </a>
+            <a href="products.html" class="nav-link">
+                <i class="fas fa-boxes"></i>
+                Produtos
+            </a>
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-calculator"></i>
+                Calculadora
+            </a>
+            <a href="investimentos.html" class="nav-link active">
+                <i class="fas fa-money-bill-wave"></i>
+                Investimentos
+            </a>
+        </div>
+        
+        <button class="menu-toggle" id="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav" id="mobile-nav">
+        <div class="mobile-nav-links">
+            <a href="dashboard.html" class="mobile-nav-link">
+                <i class="fas fa-chart-line"></i>
+                Dashboard
+            </a>
+            <a href="products.html" class="mobile-nav-link">
+                <i class="fas fa-boxes"></i>
+                Produtos
+            </a>
+            <a href="index.html" class="mobile-nav-link">
+                <i class="fas fa-calculator"></i>
+                Calculadora
+            </a>
+            <a href="investimentos.html" class="mobile-nav-link active">
+                <i class="fas fa-money-bill-wave"></i>
+                Investimentos
+            </a>
+        </div>
+    </div>
+
+    <!-- Container do Formulário de Investimentos -->
+    <div class="container">
+        <div class="form-container">
+            <div id="alert" class="alert">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="alert-message"></span>
+            </div>
+            
+            <form id="investimentoForm">
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <h2>Informações da Compra</h2>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="dataCompra">
+                                <i class="fas fa-calendar-alt"></i>
+                                Data da Compra
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-calendar input-icon"></i>
+                                <input type="date" id="dataCompra" required>
+                            </div>
+                            <div class="error-message" id="dataCompraError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Selecione uma data válida
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fornecedor">
+                                <i class="fas fa-store"></i>
+                                Fornecedor
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-building input-icon"></i>
+                                <input type="text" id="fornecedor" placeholder="Nome do fornecedor">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formaPagamento">
+                            <i class="fas fa-credit-card"></i>
+                            Forma de Pagamento
+                        </label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-money-bill-wave input-icon"></i>
+                            <select id="formaPagamento" required>
+                                <option value="">Selecione a forma de pagamento</option>
+                                <option value="pix">PIX</option>
+                                <option value="cartao_avista">Cartão (À Vista)</option>
+                                <option value="cartao_parcelado">Cartão (Parcelado)</option>
+                                <option value="dinheiro">Dinheiro</option>
+                                <option value="boleto">Boleto</option>
+                            </select>
+                        </div>
+                        <div class="error-message" id="formaPagamentoError">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Selecione uma forma de pagamento
+                        </div>
+                    </div>
+
+                    <div id="parcelamentoCampos" class="parcelamento-campos">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="numeroParcelas">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    Número de Parcelas
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-sort-numeric-up input-icon"></i>
+                                    <input type="number" id="numeroParcelas" min="2" max="24" value="2">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="dataPrimeiraParcela">
+                                    <i class="fas fa-calendar-day"></i>
+                                    Data da 1ª Parcela
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-calendar input-icon"></i>
+                                    <input type="date" id="dataPrimeiraParcela">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="parcelasLista" class="parcelas-lista">
+                            <!-- Lista de parcelas será gerada aqui -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="fas fa-cube"></i>
+                        <h2>Adicionar Item</h2>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="categoria">
+                                <i class="fas fa-list"></i>
+                                Categoria
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-tags input-icon"></i>
+                                <select id="categoria" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <option value="tecido">Tecido (metros)</option>
+                                    <option value="aviamento">Aviamento</option>
+                                    <option value="ferramenta">Ferramenta (unidade)</option>
+                                    <option value="maquina">Máquina (unidade)</option>
+                                </select>
+                            </div>
+                            <div class="error-message" id="categoriaError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Selecione uma categoria
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nomeItem">
+                                <i class="fas fa-tag"></i>
+                                Nome do Item
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-pen input-icon"></i>
+                                <input type="text" id="nomeItem" placeholder="Ex: Tecido de Algodão" required>
+                            </div>
+                            <div class="error-message" id="nomeItemError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Insira um nome para o item
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label for="valorUnitario">
+                                <i class="fas fa-dollar-sign"></i>
+                                Valor Unitário (R$)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-money-bill-wave input-icon"></i>
+                                <input type="text" id="valorUnitario" class="money-input" placeholder="0,00" required>
+                            </div>
+                            <div class="error-message" id="valorUnitarioError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Insira um valor válido
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quantidade">
+                                <i class="fas fa-boxes"></i>
+                                Quantidade
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-cube input-icon"></i>
+                                <input type="text" id="quantidade" class="number-input" placeholder="1" required>
+                            </div>
+                            <div class="error-message" id="quantidadeError">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Insira uma quantidade válida
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="valorTotalItem">
+                                <i class="fas fa-calculator"></i>
+                                Valor Total (R$)
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-calculator input-icon"></i>
+                                <input type="text" id="valorTotalItem" class="money-input" placeholder="0,00" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Campos específicos por categoria -->
+                    <div id="camposTecido" class="categoria-campos">
+                        <div class="section-title">
+                            <i class="fas fa-tshirt"></i>
+                            <h3>Detalhes do Tecido</h3>
+                        </div>
+                        
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label for="comprimentoTecido">
+                                    <i class="fas fa-ruler-horizontal"></i>
+                                    Comprimento (m)
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-ruler input-icon"></i>
+                                    <input type="text" id="comprimentoTecido" class="number-input" placeholder="0,00">
+                                </div>
+                                <div class="error-message" id="comprimentoTecidoError">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Insira o comprimento
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="larguraTecido">
+                                    <i class="fas fa-arrows-alt-v"></i>
+                                    Largura (cm)
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-arrows-alt-h input-icon"></i>
+                                    <input type="text" id="larguraTecido" class="number-input" placeholder="Ex: 140">
+                                </div>
+                                <div class="error-message" id="larguraTecidoError">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Insira a largura
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tipoTecido">
+                                    <i class="fas fa-palette"></i>
+                                    Tipo de Tecido
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-fabric input-icon"></i>
+                                    <select id="tipoTecido">
+                                        <option value="">Selecione o tipo</option>
+                                        <option value="algodao">Algodão</option>
+                                        <option value="viscose">Viscose</option>
+                                        <option value="malha">Malha</option>
+                                        <option value="seda">Seda</option>
+                                        <option value="linho">Linho</option>
+                                        <option value="jeans">Jeans</option>
+                                        <option value="crepe">Crepe</option>
+                                        <option value="chiffon">Chiffon</option>
+                                        <option value="cetim">Cetim</option>
+                                        <option value="veludo">Veludo</option>
+                                        <option value="la">Lã</option>
+                                        <option value="sarja">Sarja</option>
+                                        <option value="tricoline">Tricoline</option>
+                                        <option value="suplex">Suplex</option>
+                                        <option value="gorgorão">Gorgorão</option>
+                                        <option value="oxford">Oxford</option>
+                                        <option value="gabardine">Gabardine</option>
+                                        <option value="lona">Lona</option>
+                                        <option value="napa">Napa</option>
+                                        <option value="camurca">Camurça</option>
+                                        <option value="tule">Tule</option>
+                                        <option value="organza">Organza</option>
+                                        <option value="tafetá">Tafetá</option>
+                                        <option value="jacquard">Jacquard</option>
+                                        <option value="renda">Renda</option>
+                                        <option value="bordado">Bordado</option>
+                                        <option value="outro">Outro</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="outroTecido" class="outro-campo">
+                            <div class="form-group">
+                                <label for="nomeOutroTecido">
+                                    <i class="fas fa-pen"></i>
+                                    Nome do Tecido
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-pen input-icon"></i>
+                                    <input type="text" id="nomeOutroTecido" placeholder="Digite o nome do tecido">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="camposAviamento" class="categoria-campos">
+                        <div class="section-title">
+                            <i class="fas fa-paperclip"></i>
+                            <h3>Detalhes do Aviamento</h3>
+                        </div>
+                        
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label for="tipoMedidaAviamento">
+                                    <i class="fas fa-calculator"></i>
+                                    Tipo de Medida
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-ruler-combined input-icon"></i>
+                                    <select id="tipoMedidaAviamento">
+                                        <option value="metro">Por Metro</option>
+                                        <option value="unidade">Por Unidade</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tipoAviamento">
+                                    <i class="fas fa-tag"></i>
+                                    Tipo de Aviamento
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-paperclip input-icon"></i>
+                                    <select id="tipoAviamento">
+                                        <option value="">Selecione o tipo</option>
+                                        <option value="ziper">Zíper</option>
+                                        <option value="botao">Botão</option>
+                                        <option value="linha">Linha</option>
+                                        <option value="elastico">Elástico</option>
+                                        <option value="fita">Fita</option>
+                                        <option value="viés">Viés</option>
+                                        <option value="passamanaria">Passamanaria</option>
+                                        <option value="fecho">Fecho</option>
+                                        <option value="cola_textil">Cola Têxtil</option>
+                                        <option value="barbante">Barbante</option>
+                                        <option value="cordao">Cordão</option>
+                                        <option value="fivela">Fivela</option>
+                                        <option value="ilhos">Ilhós</option>
+                                        <option value="velcro">Velcro</option>
+                                        <option value="pregador">Pregador</option>
+                                        <option value="argola">Argola</option>
+                                        <option value="corrente">Corrente</option>
+                                        <option value="tranca">Trança</option>
+                                        <option value="pompon">Pompom</option>
+                                        <option value="lantejoula">Lantejoula</option>
+                                        <option value="strass">Strass</option>
+                                        <option value="pedra">Pedra</option>
+                                        <option value="penca">Penca</option>
+                                        <option value="outro">Outro</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="outroAviamento" class="outro-campo">
+                            <div class="form-group">
+                                <label for="nomeOutroAviamento">
+                                    <i class="fas fa-pen"></i>
+                                    Nome do Aviamento
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-pen input-icon"></i>
+                                    <input type="text" id="nomeOutroAviamento" placeholder="Digite o nome do aviamento">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="camposFerramenta" class="categoria-campos">
+                        <div class="section-title">
+                            <i class="fas fa-tools"></i>
+                            <h3>Detalhes da Ferramenta</h3>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tipoFerramenta">
+                                <i class="fas fa-toolbox"></i>
+                                Tipo de Ferramenta
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-wrench input-icon"></i>
+                                <select id="tipoFerramenta">
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="tesoura">Tesoura</option>
+                                    <option value="agulha">Agulha</option>
+                                    <option value="alfinete">Alfinete</option>
+                                    <option value="medidor">Medidor</option>
+                                    <option value="bobina">Bobina</option>
+                                    <option value="carretilha">Carretilha</option>
+                                    <option value="pe_maquina">Pé de Máquina</option>
+                                    <option value="lamina_corte">Lâmina de Corte</option>
+                                    <option value="estilete">Estilete</option>
+                                    <option value="regua">Régua</option>
+                                    <option value="transferidor">Transferidor</option>
+                                    <option value="riscador">Riscador</option>
+                                    <option value="furador">Furador</option>
+                                    <option value="grampeador">Grampeador</option>
+                                    <option value="pistola_cola">Pistola de Cola</option>
+                                    <option value="marcador">Marcador</option>
+                                    <option value="desfiapador">Desfiapador</option>
+                                    <option value="ferro_passar">Ferro de Passar</option>
+                                    <option value="prancheta">Prancheta</option>
+                                    <option value="kit_costura">Kit de Costura</option>
+                                    <option value="dedal">Dedal</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="outroFerramenta" class="outro-campo">
+                            <div class="form-group">
+                                <label for="nomeOutroFerramenta">
+                                    <i class="fas fa-pen"></i>
+                                    Nome da Ferramenta
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-pen input-icon"></i>
+                                    <input type="text" id="nomeOutroFerramenta" placeholder="Digite o nome da ferramenta">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="camposMaquina" class="categoria-campos">
+                        <div class="section-title">
+                            <i class="fas fa-cogs"></i>
+                            <h3>Detalhes da Máquina</h3>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tipoMaquina">
+                                <i class="fas fa-industry"></i>
+                                Tipo de Máquina
+                            </label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-cog input-icon"></i>
+                                <select id="tipoMaquina">
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="costura">Máquina de Costura</option>
+                                    <option value="overlock">Overlock</option>
+                                    <option value="corte">Máquina de Corte</option>
+                                    <option value="bordar">Máquina de Bordar</option>
+                                    <option value="galoneira">Máquina de Galoneira</option>
+                                    <option value="pregadeira">Máquina Pregadeira</option>
+                                    <option value="caseadeira">Máquina Caseadeira</option>
+                                    <option value="pesponto">Máquina de Pesponto</option>
+                                    <option value="botoneira">Máquina Botoneira</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="outroMaquina" class="outro-campo">
+                            <div class="form-group">
+                                <label for="nomeOutroMaquina">
+                                    <i class="fas fa-pen"></i>
+                                    Nome da Máquina
+                                </label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-pen input-icon"></i>
+                                    <input type="text" id="nomeOutroMaquina" placeholder="Digite o nome da máquina">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="buttons">
+                        <button type="button" id="adicionarItem" class="btn btn-primary">
+                            <i class="fas fa-plus-circle"></i>
+                            Adicionar Item à Compra
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Lista de itens adicionados -->
+                <div id="itensAdicionados" class="form-section" style="display: none;">
+                    <div class="section-title">
+                        <i class="fas fa-shopping-cart"></i>
+                        <h2>Itens da Compra</h2>
+                    </div>
+                    
+                    <div class="itens-adicionados">
+                        <div class="itens-adicionados-header">
+                            <span>Itens Adicionados</span>
+                            <span id="totalItens">0 itens</span>
+                        </div>
+                        <div id="itensLista" class="itens-lista">
+                            <!-- Itens adicionados aparecerão aqui -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="fas fa-sticky-note"></i>
+                        <h2>Observações</h2>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="observacoes">
+                            <i class="fas fa-edit"></i>
+                            Observações Adicionais
+                        </label>
+                        <textarea id="observacoes" rows="3" placeholder="Observações sobre a compra..." style="width: 100%; padding: 12px; border: 1px solid var(--gray-medium); border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Prévia do investimento -->
+                <div id="previa" class="previa" style="display: none;">
+                    <h2>
+                        <i class="fas fa-eye"></i>
+                        Prévia do Investimento
+                    </h2>
+                    <div id="previaDetalhes">
+                        <!-- Detalhes da prévia aparecerão aqui -->
+                    </div>
+                </div>
+                
+                <div class="buttons">
+                    <button type="button" id="calcularInvestimento" class="btn btn-primary">
+                        <i class="fas fa-calculator"></i>
+                        Calcular Investimento
+                    </button>
+                    <button type="button" id="salvarInvestimento" class="btn btn-success" style="display: none;">
+                        <i class="fas fa-save"></i>
+                        Salvar Investimento
+                    </button>
+                    <button type="reset" class="btn btn-secondary">
+                        <i class="fas fa-broom"></i>
+                        Limpar Formulário
+                    </button>
+                </div>
+            </form>
+            
+            <div id="resultado" class="resultado">
+                <h2>
+                    <i class="fas fa-check-circle"></i>
+                    Investimento Registrado com Sucesso!
+                </h2>
+                <div id="resultadoDetalhes">
+                    <!-- Detalhes do investimento registrado aparecerão aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Backend
+        const BACKEND_URL = 'https://backend-calculador.onrender.com';
+        const SAVE_INVESTMENT_ENDPOINT = `${BACKEND_URL}/api/investments`;
+        
+        // Variáveis de estado
+        let itensCompra = [];
+        let totalCompra = 0;
+        
+        // Menu mobile toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileNav = document.getElementById('mobile-nav');
+        
+        menuToggle.addEventListener('click', () => {
+            mobileNav.classList.toggle('active');
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos do DOM
+            const categoriaSelect = document.getElementById('categoria');
+            const camposTecido = document.getElementById('camposTecido');
+            const camposAviamento = document.getElementById('camposAviamento');
+            const camposFerramenta = document.getElementById('camposFerramenta');
+            const camposMaquina = document.getElementById('camposMaquina');
+            const tipoTecidoSelect = document.getElementById('tipoTecido');
+            const tipoAviamentoSelect = document.getElementById('tipoAviamento');
+            const tipoFerramentaSelect = document.getElementById('tipoFerramenta');
+            const tipoMaquinaSelect = document.getElementById('tipoMaquina');
+            const outroTecidoDiv = document.getElementById('outroTecido');
+            const outroAviamentoDiv = document.getElementById('outroAviamento');
+            const outroFerramentaDiv = document.getElementById('outroFerramenta');
+            const outroMaquinaDiv = document.getElementById('outroMaquina');
+            const formaPagamentoSelect = document.getElementById('formaPagamento');
+            const parcelamentoCampos = document.getElementById('parcelamentoCampos');
+            const numeroParcelasInput = document.getElementById('numeroParcelas');
+            const dataPrimeiraParcelaInput = document.getElementById('dataPrimeiraParcela');
+            const parcelasLista = document.getElementById('parcelasLista');
+            const adicionarItemBtn = document.getElementById('adicionarItem');
+            const itensAdicionadosSection = document.getElementById('itensAdicionados');
+            const itensLista = document.getElementById('itensLista');
+            const totalItensSpan = document.getElementById('totalItens');
+            const calcularInvestimentoBtn = document.getElementById('calcularInvestimento');
+            const salvarInvestimentoBtn = document.getElementById('salvarInvestimento');
+            const previaSection = document.getElementById('previa');
+            const previaDetalhes = document.getElementById('previaDetalhes');
+            const resultadoDiv = document.getElementById('resultado');
+            const resultadoDetalhes = document.getElementById('resultadoDetalhes');
+            const form = document.getElementById('investimentoForm');
+            const alertDiv = document.getElementById('alert');
+            const alertMessage = document.getElementById('alert-message');
+            const valorUnitarioInput = document.getElementById('valorUnitario');
+            const quantidadeInput = document.getElementById('quantidade');
+            const valorTotalItemInput = document.getElementById('valorTotalItem');
+            
+            // Funções auxiliares
+            function formatarMoeda(valor) {
+                if (!valor) return '0,00';
+                valor = valor.toString().replace(/\D/g, '');
+                valor = (parseFloat(valor) / 100).toFixed(2);
+                return new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(valor);
+            }
+            
+            function parseMoeda(valor) {
+                if (!valor) return 0;
+                valor = valor.toString().replace(/[^\d,]/g, '');
+                return parseFloat(valor.replace(',', '.')) || 0;
+            }
+            
+            function formatarNumero(valor) {
+                if (!valor) return '';
+                let limpo = valor.toString().replace(/[^\d,.]/g, '');
+                limpo = limpo.replace(/\./g, '');
+                limpo = limpo.replace(',', '.');
+                const numero = parseFloat(limpo) || 0;
+                return new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                }).format(numero);
+            }
+            
+            function parseNumero(valor) {
+                if (!valor) return 0;
+                let limpo = valor.toString();
+                limpo = limpo.replace(/\./g, '');
+                limpo = limpo.replace(',', '.');
+                limpo = limpo.replace(/[^\d.]/g, '');
+                return parseFloat(limpo) || 0;
+            }
+            
+            function mostrarErro(campoId, mensagem) {
+                const campo = document.getElementById(campoId);
+                const erro = document.getElementById(campoId + 'Error');
+                if (campo && erro) {
+                    campo.classList.add('input-error');
+                    erro.textContent = mensagem;
+                    erro.classList.add('active');
+                }
+            }
+            
+            function limparErro(campoId) {
+                const campo = document.getElementById(campoId);
+                const erro = document.getElementById(campoId + 'Error');
+                if (campo && erro) {
+                    campo.classList.remove('input-error');
+                    erro.classList.remove('active');
+                }
+            }
+            
+            function mostrarAlerta(mensagem, tipo) {
+                alertMessage.textContent = mensagem;
+                alertDiv.className = `alert alert-${tipo}`;
+                alertDiv.style.display = 'flex';
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+            }
+            
+            function calcularValorTotalItem() {
+                const valorUnitario = parseMoeda(valorUnitarioInput.value);
+                const quantidade = parseNumero(quantidadeInput.value);
+                const valorTotal = valorUnitario * quantidade;
+                valorTotalItemInput.value = formatarMoeda(valorTotal.toString());
+            }
+            
+            function validarItem() {
+                let valido = true;
+                const camposObrigatorios = ['categoria', 'nomeItem', 'valorUnitario', 'quantidade'];
+                
+                camposObrigatorios.forEach(campoId => {
+                    const campo = document.getElementById(campoId);
+                    if (!campo || !campo.value.trim()) {
+                        mostrarErro(campoId, 'Este campo é obrigatório');
+                        valido = false;
+                    } else {
+                        limparErro(campoId);
+                    }
+                });
+                
+                // Validação específica por categoria
+                const categoria = categoriaSelect.value;
+                
+                if (categoria === 'tecido') {
+                    const comprimento = parseNumero(document.getElementById('comprimentoTecido').value);
+                    if (!comprimento || comprimento <= 0) {
+                        mostrarErro('comprimentoTecido', 'Insira um comprimento válido');
+                        valido = false;
+                    } else {
+                        limparErro('comprimentoTecido');
+                    }
+                    
+                    const tipoTecido = document.getElementById('tipoTecido').value;
+                    if (!tipoTecido) {
+                        mostrarErro('tipoTecido', 'Selecione um tipo de tecido');
+                        valido = false;
+                    } else {
+                        limparErro('tipoTecido');
+                    }
+                    
+                    if (tipoTecido === 'outro') {
+                        const nomeOutro = document.getElementById('nomeOutroTecido').value;
+                        if (!nomeOutro) {
+                            mostrarErro('nomeOutroTecido', 'Digite o nome do tecido');
+                            valido = false;
+                        } else {
+                            limparErro('nomeOutroTecido');
+                        }
+                    }
+                } else if (categoria === 'aviamento') {
+                    const tipoAviamento = document.getElementById('tipoAviamento').value;
+                    if (!tipoAviamento) {
+                        mostrarErro('tipoAviamento', 'Selecione um tipo de aviamento');
+                        valido = false;
+                    } else {
+                        limparErro('tipoAviamento');
+                    }
+                    
+                    if (tipoAviamento === 'outro') {
+                        const nomeOutro = document.getElementById('nomeOutroAviamento').value;
+                        if (!nomeOutro) {
+                            mostrarErro('nomeOutroAviamento', 'Digite o nome do aviamento');
+                            valido = false;
+                        } else {
+                            limparErro('nomeOutroAviamento');
+                        }
+                    }
+                } else if (categoria === 'ferramenta') {
+                    const tipoFerramenta = document.getElementById('tipoFerramenta').value;
+                    if (!tipoFerramenta) {
+                        mostrarErro('tipoFerramenta', 'Selecione um tipo de ferramenta');
+                        valido = false;
+                    } else {
+                        limparErro('tipoFerramenta');
+                    }
+                    
+                    if (tipoFerramenta === 'outro') {
+                        const nomeOutro = document.getElementById('nomeOutroFerramenta').value;
+                        if (!nomeOutro) {
+                            mostrarErro('nomeOutroFerramenta', 'Digite o nome da ferramenta');
+                            valido = false;
+                        } else {
+                            limparErro('nomeOutroFerramenta');
+                        }
+                    }
+                } else if (categoria === 'maquina') {
+                    const tipoMaquina = document.getElementById('tipoMaquina').value;
+                    if (!tipoMaquina) {
+                        mostrarErro('tipoMaquina', 'Selecione um tipo de máquina');
+                        valido = false;
+                    } else {
+                        limparErro('tipoMaquina');
+                    }
+                    
+                    if (tipoMaquina === 'outro') {
+                        const nomeOutro = document.getElementById('nomeOutroMaquina').value;
+                        if (!nomeOutro) {
+                            mostrarErro('nomeOutroMaquina', 'Digite o nome da máquina');
+                            valido = false;
+                        } else {
+                            limparErro('nomeOutroMaquina');
+                        }
+                    }
+                }
+                
+                // Validação do valor unitário
+                const valorUnitario = parseMoeda(valorUnitarioInput.value);
+                if (isNaN(valorUnitario) || valorUnitario <= 0) {
+                    mostrarErro('valorUnitario', 'Insira um valor válido');
+                    valido = false;
+                } else {
+                    limparErro('valorUnitario');
+                }
+                
+                // Validação da quantidade
+                const quantidade = parseNumero(quantidadeInput.value);
+                if (isNaN(quantidade) || quantidade <= 0) {
+                    mostrarErro('quantidade', 'Insira uma quantidade válida');
+                    valido = false;
+                } else {
+                    limparErro('quantidade');
+                }
+                
+                return valido;
+            }
+            
+            function adicionarItem() {
+                if (!validarItem()) {
+                    mostrarAlerta('Corrija os erros antes de adicionar o item.', 'error');
+                    return;
+                }
+                
+                try {
+                    const item = {
+                        id: Date.now(), // ID único baseado no timestamp
+                        categoria: categoriaSelect.value,
+                        nome: document.getElementById('nomeItem').value,
+                        valor_unitario: parseMoeda(valorUnitarioInput.value),
+                        quantidade: parseNumero(quantidadeInput.value),
+                        valor_total: parseMoeda(valorTotalItemInput.value)
+                    };
+                    
+                    // Adiciona detalhes específicos por categoria
+                    if (item.categoria === 'tecido') {
+                        let tipoTecido = document.getElementById('tipoTecido').value;
+                        if (tipoTecido === 'outro') {
+                            tipoTecido = document.getElementById('nomeOutroTecido').value;
+                        }
+                        
+                        item.detalhes = {
+                            comprimento: parseNumero(document.getElementById('comprimentoTecido').value),
+                            largura: parseNumero(document.getElementById('larguraTecido').value) || 0,
+                            tipo: tipoTecido
+                        };
+                    } else if (item.categoria === 'aviamento') {
+                        let tipoAviamento = document.getElementById('tipoAviamento').value;
+                        if (tipoAviamento === 'outro') {
+                            tipoAviamento = document.getElementById('nomeOutroAviamento').value;
+                        }
+                        
+                        item.detalhes = {
+                            tipo_medida: document.getElementById('tipoMedidaAviamento').value,
+                            tipo: tipoAviamento
+                        };
+                    } else if (item.categoria === 'ferramenta') {
+                        let tipoFerramenta = document.getElementById('tipoFerramenta').value;
+                        if (tipoFerramenta === 'outro') {
+                            tipoFerramenta = document.getElementById('nomeOutroFerramenta').value;
+                        }
+                        
+                        item.detalhes = {
+                            tipo: tipoFerramenta
+                        };
+                    } else if (item.categoria === 'maquina') {
+                        let tipoMaquina = document.getElementById('tipoMaquina').value;
+                        if (tipoMaquina === 'outro') {
+                            tipoMaquina = document.getElementById('nomeOutroMaquina').value;
+                        }
+                        
+                        item.detalhes = {
+                            tipo: tipoMaquina
+                        };
+                    }
+                    
+                    // Adiciona o item à lista
+                    itensCompra.push(item);
+                    
+                    // Atualiza a interface
+                    atualizarListaItens();
+                    
+                    // Limpa o formulário de item
+                    document.getElementById('nomeItem').value = '';
+                    valorUnitarioInput.value = '';
+                    quantidadeInput.value = '1';
+                    valorTotalItemInput.value = '';
+                    
+                    // Limpa os campos específicos da categoria
+                    limparCamposCategoria();
+                    
+                    // Mostra a seção de itens adicionados
+                    itensAdicionadosSection.style.display = 'block';
+                    
+                    mostrarAlerta('Item adicionado com sucesso!', 'success');
+                    
+                } catch (error) {
+                    console.error('Erro ao adicionar item:', error);
+                    mostrarAlerta('Erro ao adicionar o item. Tente novamente.', 'error');
+                }
+            }
+            
+            function limparCamposCategoria() {
+                // Limpa campos específicos de cada categoria
+                document.getElementById('comprimentoTecido').value = '';
+                document.getElementById('larguraTecido').value = '';
+                document.getElementById('tipoTecido').value = '';
+                document.getElementById('nomeOutroTecido').value = '';
+                document.getElementById('tipoAviamento').value = '';
+                document.getElementById('nomeOutroAviamento').value = '';
+                document.getElementById('tipoFerramenta').value = '';
+                document.getElementById('nomeOutroFerramenta').value = '';
+                document.getElementById('tipoMaquina').value = '';
+                document.getElementById('nomeOutroMaquina').value = '';
+                
+                // Esconde campos "Outro"
+                outroTecidoDiv.classList.remove('active');
+                outroAviamentoDiv.classList.remove('active');
+                outroFerramentaDiv.classList.remove('active');
+                outroMaquinaDiv.classList.remove('active');
+            }
+            
+            function removerItem(id) {
+                itensCompra = itensCompra.filter(item => item.id !== id);
+                atualizarListaItens();
+                
+                if (itensCompra.length === 0) {
+                    itensAdicionadosSection.style.display = 'none';
+                }
+                
+                mostrarAlerta('Item removido com sucesso!', 'success');
+            }
+            
+            function atualizarListaItens() {
+                itensLista.innerHTML = '';
+                totalCompra = 0;
+                
+                itensCompra.forEach(item => {
+                    totalCompra += item.valor_total;
+                    
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'item-lista';
+                    
+                    let detalhesTexto = '';
+                    if (item.categoria === 'tecido') {
+                        detalhesTexto = `${item.detalhes.comprimento}m | ${item.detalhes.largura}cm | ${item.detalhes.tipo}`;
+                    } else if (item.categoria === 'aviamento') {
+                        detalhesTexto = `${item.detalhes.tipo_medida} | ${item.detalhes.tipo}`;
+                    } else {
+                        detalhesTexto = item.detalhes.tipo;
+                    }
+                    
+                    itemElement.innerHTML = `
+                        <div class="item-info">
+                            <div class="item-nome">${item.nome}</div>
+                            <div class="item-detalhes">${detalhesTexto}</div>
+                        </div>
+                        <div class="item-info" style="text-align: right;">
+                            <div class="item-nome">R$ ${item.valor_total.toFixed(2)}</div>
+                            <div class="item-detalhes">${item.quantidade} x R$ ${item.valor_unitario.toFixed(2)}</div>
+                        </div>
+                        <div class="item-acoes">
+                            <button type="button" class="item-remover" data-id="${item.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    itensLista.appendChild(itemElement);
+                });
+                
+                totalItensSpan.textContent = `${itensCompra.length} ${itensCompra.length === 1 ? 'item' : 'itens'}`;
+                
+                // Adiciona event listeners aos botões de remover
+                document.querySelectorAll('.item-remover').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.getAttribute('data-id'));
+                        removerItem(id);
+                    });
+                });
+            }
+            
+            function gerarParcelas() {
+                if (itensCompra.length === 0 || totalCompra === 0) return;
+                
+                const formaPagamento = formaPagamentoSelect.value;
+                const numeroParcelas = parseInt(numeroParcelasInput.value) || 1;
+                const dataPrimeiraParcela = dataPrimeiraParcelaInput.value;
+                
+                parcelasLista.innerHTML = '';
+                
+                if (formaPagamento === 'cartao_parcelado' && numeroParcelas > 1) {
+                    const valorParcela = totalCompra / numeroParcelas;
+                    let dataParcela = new Date(dataPrimeiraParcela);
+                    
+                    for (let i = 1; i <= numeroParcelas; i++) {
+                        const parcelaElement = document.createElement('div');
+                        parcelaElement.className = 'parcela-item parcela-pendente';
+                        
+                        const dataFormatada = dataParcela.toLocaleDateString('pt-BR');
+                        
+                        parcelaElement.innerHTML = `
+                            <div>
+                                <strong>Parcela ${i}/${numeroParcelas}</strong>
+                                <div>Vencimento: ${dataFormatada}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div><strong>R$ ${valorParcela.toFixed(2)}</strong></div>
+                                <div style="font-size: 0.8rem; color: var(--warning-color);">Pendente</div>
+                            </div>
+                        `;
+                        
+                        parcelasLista.appendChild(parcelaElement);
+                        
+                        // Próximo mês
+                        dataParcela.setMonth(dataParcela.getMonth() + 1);
+                    }
+                } else {
+                    // Pagamento à vista
+                    const parcelaElement = document.createElement('div');
+                    parcelaElement.className = 'parcela-item parcela-pendente';
+                    
+                    parcelaElement.innerHTML = `
+                        <div>
+                            <strong>Pagamento Único</strong>
+                            <div>Vencimento: ${new Date().toLocaleDateString('pt-BR')}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div><strong>R$ ${totalCompra.toFixed(2)}</strong></div>
+                            <div style="font-size: 0.8rem; color: var(--warning-color);">Pendente</div>
+                        </div>
+                    `;
+                    
+                    parcelasLista.appendChild(parcelaElement);
+                }
+            }
+            
+            function atualizarPrevia() {
+                if (itensCompra.length === 0) {
+                    previaSection.style.display = 'none';
+                    return;
+                }
+                
+                const formaPagamento = formaPagamentoSelect.value;
+                const numeroParcelas = parseInt(numeroParcelasInput.value) || 1;
+                const valorParcela = totalCompra / numeroParcelas;
+                
+                let formaPagamentoTexto = '';
+                if (formaPagamento === 'pix') {
+                    formaPagamentoTexto = 'PIX';
+                } else if (formaPagamento === 'cartao_avista') {
+                    formaPagamentoTexto = 'Cartão (À Vista)';
+                } else if (formaPagamento === 'cartao_parcelado') {
+                    formaPagamentoTexto = `Cartão (${numeroParcelas}x de R$ ${valorParcela.toFixed(2)})`;
+                } else if (formaPagamento === 'dinheiro') {
+                    formaPagamentoTexto = 'Dinheiro';
+                } else if (formaPagamento === 'boleto') {
+                    formaPagamentoTexto = 'Boleto';
+                }
+                
+                previaDetalhes.innerHTML = `
+                    <div class="previa-section-header">Resumo da Compra</div>
+                    <div class="previa-item"><span>Total de Itens:</span><span>${itensCompra.length}</span></div>
+                    <div class="previa-item"><span>Valor Total:</span><span>R$ ${totalCompra.toFixed(2)}</span></div>
+                    <div class="previa-item"><span>Forma de Pagamento:</span><span>${formaPagamentoTexto}</span></div>
+                    
+                    <div class="previa-section-header">Detalhes dos Itens</div>
+                    ${itensCompra.map(item => `
+                        <div class="previa-item">
+                            <span>${item.nome} (${item.quantidade}x)</span>
+                            <span>R$ ${item.valor_total.toFixed(2)}</span>
+                        </div>
+                    `).join('')}
+                    
+                    <div class="previa-total">
+                        <span>Valor Total da Compra:</span>
+                        <span>R$ ${totalCompra.toFixed(2)}</span>
+                    </div>
+                `;
+                
+                previaSection.style.display = 'block';
+                salvarInvestimentoBtn.style.display = 'flex';
+            }
+            
+            // Event Listeners
+            categoriaSelect.addEventListener('change', function() {
+                // Oculta todos os campos específicos
+                camposTecido.classList.remove('active');
+                camposAviamento.classList.remove('active');
+                camposFerramenta.classList.remove('active');
+                camposMaquina.classList.remove('active');
+                
+                // Mostra os campos específicos da categoria selecionada
+                if (this.value === 'tecido') {
+                    camposTecido.classList.add('active');
+                } else if (this.value === 'aviamento') {
+                    camposAviamento.classList.add('active');
+                } else if (this.value === 'ferramenta') {
+                    camposFerramenta.classList.add('active');
+                } else if (this.value === 'maquina') {
+                    camposMaquina.classList.add('active');
+                }
+                
+                // Limpa os campos da categoria anterior
+                limparCamposCategoria();
+            });
+            
+            // Event listeners para campos "Outro"
+            tipoTecidoSelect.addEventListener('change', function() {
+                if (this.value === 'outro') {
+                    outroTecidoDiv.classList.add('active');
+                } else {
+                    outroTecidoDiv.classList.remove('active');
+                }
+            });
+            
+            tipoAviamentoSelect.addEventListener('change', function() {
+                if (this.value === 'outro') {
+                    outroAviamentoDiv.classList.add('active');
+                } else {
+                    outroAviamentoDiv.classList.remove('active');
+                }
+            });
+            
+            tipoFerramentaSelect.addEventListener('change', function() {
+                if (this.value === 'outro') {
+                    outroFerramentaDiv.classList.add('active');
+                } else {
+                    outroFerramentaDiv.classList.remove('active');
+                }
+            });
+            
+            tipoMaquinaSelect.addEventListener('change', function() {
+                if (this.value === 'outro') {
+                    outroMaquinaDiv.classList.add('active');
+                } else {
+                    outroMaquinaDiv.classList.remove('active');
+                }
+            });
+            
+            formaPagamentoSelect.addEventListener('change', function() {
+                if (this.value === 'cartao_parcelado') {
+                    parcelamentoCampos.classList.add('active');
+                } else {
+                    parcelamentoCampos.classList.remove('active');
+                }
+                
+                if (itensCompra.length > 0) {
+                    gerarParcelas();
+                    atualizarPrevia();
+                }
+            });
+            
+            numeroParcelasInput.addEventListener('change', function() {
+                if (itensCompra.length > 0) {
+                    gerarParcelas();
+                    atualizarPrevia();
+                }
+            });
+            
+            dataPrimeiraParcelaInput.addEventListener('change', function() {
+                if (itensCompra.length > 0) {
+                    gerarParcelas();
+                }
+            });
+            
+            // Formatação de inputs
+            document.querySelectorAll('.money-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const valor = this.value;
+                    if (valor) this.value = formatarMoeda(valor);
+                    limparErro(this.id);
+                    
+                    if (this.id === 'valorUnitario' || this.id === 'quantidade') {
+                        calcularValorTotalItem();
+                    }
+                });
+                input.addEventListener('blur', function() {
+                    const valor = this.value;
+                    if (valor) this.value = formatarMoeda(valor);
+                    
+                    if (this.id === 'valorUnitario' || this.id === 'quantidade') {
+                        calcularValorTotalItem();
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.number-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^\d,.]/g, '');
+                    limparErro(this.id);
+                    
+                    if (this.id === 'valorUnitario' || this.id === 'quantidade') {
+                        calcularValorTotalItem();
+                    }
+                });
+                
+                if (this.id === 'valorUnitario' || this.id === 'quantidade') {
+                    input.addEventListener('blur', calcularValorTotalItem);
+                }
+            });
+            
+            // Adicionar item
+            adicionarItemBtn.addEventListener('click', adicionarItem);
+            
+            // Calcular investimento
+            calcularInvestimentoBtn.addEventListener('click', function() {
+                if (itensCompra.length === 0) {
+                    mostrarAlerta('Adicione pelo menos um item antes de calcular.', 'error');
+                    return;
+                }
+                
+                if (!document.getElementById('dataCompra').value) {
+                    mostrarErro('dataCompra', 'Selecione a data da compra');
+                    return;
+                }
+                
+                if (!formaPagamentoSelect.value) {
+                    mostrarErro('formaPagamento', 'Selecione a forma de pagamento');
+                    return;
+                }
+                
+                gerarParcelas();
+                atualizarPrevia();
+                
+                mostrarAlerta('Prévia do investimento calculada com sucesso!', 'success');
+                previaSection.scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            // Salvar investimento
+            salvarInvestimentoBtn.addEventListener('click', async function() {
+                if (itensCompra.length === 0) {
+                    mostrarAlerta('Adicione pelo menos um item antes de salvar.', 'error');
+                    return;
+                }
+                
+                try {
+                    const investimento = {
+                        data_compra: document.getElementById('dataCompra').value,
+                        fornecedor: document.getElementById('fornecedor').value || '',
+                        forma_pagamento: formaPagamentoSelect.value,
+                        numero_parcelas: formaPagamentoSelect.value === 'cartao_parcelado' ? parseInt(numeroParcelasInput.value) : 1,
+                        data_primeira_parcela: formaPagamentoSelect.value === 'cartao_parcelado' ? dataPrimeiraParcelaInput.value : null,
+                        observacoes: document.getElementById('observacoes').value || '',
+                        itens: itensCompra,
+                        valor_total: totalCompra
+                    };
+                    
+                    // Simulação de envio para o backend
+                    // Em um cenário real, você enviaria para o backend
+                    
+                    // Mostrar resultado
+                    resultadoDetalhes.innerHTML = `
+                        <div class="resultado-item"><span>Data da Compra:</span><span>${new Date(investimento.data_compra).toLocaleDateString('pt-BR')}</span></div>
+                        ${investimento.fornecedor ? `<div class="resultado-item"><span>Fornecedor:</span><span>${investimento.fornecedor}</span></div>` : ''}
+                        <div class="resultado-item"><span>Total de Itens:</span><span>${investimento.itens.length}</span></div>
+                        <div class="resultado-item"><span>Valor Total:</span><span>R$ ${investimento.valor_total.toFixed(2)}</span></div>
+                        <div class="resultado-item"><span>Forma de Pagamento:</span><span>${investimento.forma_pagamento}</span></div>
+                        ${investimento.observacoes ? `<div class="resultado-item"><span>Observações:</span><span>${investimento.observacoes}</span></div>` : ''}
+                    `;
+                    
+                    resultadoDiv.style.display = 'block';
+                    mostrarAlerta('Investimento registrado com sucesso!', 'success');
+                    
+                    // Limpar formulário após 5 segundos
+                    setTimeout(() => {
+                        form.reset();
+                        resultadoDiv.style.display = 'none';
+                        itensAdicionadosSection.style.display = 'none';
+                        previaSection.style.display = 'none';
+                        salvarInvestimentoBtn.style.display = 'none';
+                        itensCompra = [];
+                        totalCompra = 0;
+                        
+                        // Limpar campos específicos da categoria
+                        categoriaSelect.dispatchEvent(new Event('change'));
+                    }, 5000);
+                    
+                } catch (error) {
+                    console.error('Erro ao registrar investimento:', error);
+                    mostrarAlerta('Erro ao registrar o investimento. Tente novamente.', 'error');
+                }
+            });
+            
+            // Limpar formulário
+            form.addEventListener('reset', function() {
+                resultadoDiv.style.display = 'none';
+                itensAdicionadosSection.style.display = 'none';
+                previaSection.style.display = 'none';
+                salvarInvestimentoBtn.style.display = 'none';
+                itensCompra = [];
+                totalCompra = 0;
+                categoriaSelect.dispatchEvent(new Event('change'));
+            });
+            
+            // Inicialização
+            // Definir data atual como padrão
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('dataCompra').value = hoje;
+            dataPrimeiraParcelaInput.value = hoje;
+            
+            // Calcular valor total do item quando a página carrega
+            calcularValorTotalItem();
+        });
+    </script>
+</body>
+</html>
