@@ -1,5 +1,3 @@
-[file name]: server.js
-[file content begin]
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -340,4 +338,4 @@ app.delete('/api/investments/:id', async (req, res) => {
 app.listen(port, () => {
     console.log(`Servidor rodando na porta ${port}`);
 });
-[file content end]
+
