@@ -1,3 +1,5 @@
+[file name]: server.js
+[file content begin]
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -30,7 +32,7 @@ app.get('/api/wake-up', (req, res) => {
     res.status(200).json({ message: "Servidor acordado e pronto!" });
 });
 
-// Rota de Salvamento - CORRIGIDA
+// Rota de Salvamento de Produtos - CORRIGIDA
 app.post('/api/products', upload.single('produtoFoto'), async (req, res) => {
     try {
         console.log('Recebendo requisição para salvar produto...');
@@ -157,6 +159,185 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
+// Rota para salvar investimentos
+app.post('/api/investments', async (req, res) => {
+    try {
+        console.log('Recebendo requisição para salvar investimento...');
+        
+        const {
+            data_compra,
+            fornecedor,
+            forma_pagamento,
+            numero_parcelas,
+            data_primeira_parcela,
+            observacoes,
+            itens,
+            valor_total
+        } = req.body;
+
+        console.log('Dados do investimento recebidos:', {
+            data_compra,
+            fornecedor,
+            forma_pagamento,
+            numero_parcelas,
+            data_primeira_parcela,
+            observacoes,
+            quantidade_itens: itens?.length,
+            valor_total
+        });
+
+        // Validar dados obrigatórios
+        if (!data_compra || !forma_pagamento || !itens || itens.length === 0) {
+            return res.status(400).json({ 
+                error: "Dados obrigatórios faltando: data_compra, forma_pagamento e itens são necessários" 
+            });
+        }
+
+        // Preparar dados para inserção
+        const dadosParaInserir = {
+            data_compra,
+            fornecedor: fornecedor || null,
+            forma_pagamento,
+            numero_parcelas: numero_parcelas || 1,
+            data_primeira_parcela: data_primeira_parcela || null,
+            observacoes: observacoes || null,
+            itens, // Armazenar como JSONB
+            valor_total: parseFloat(valor_total) || 0
+        };
+
+        console.log('Inserindo investimento no banco de dados...');
+
+        // Inserir no Supabase
+        const { data, error } = await supabase
+            .from('investments')
+            .insert([dadosParaInserir])
+            .select();
+
+        if (error) {
+            console.error('Erro ao inserir investimento no Supabase:', error);
+            throw error;
+        }
+
+        console.log('Investimento salvo com sucesso! ID:', data[0]?.id);
+
+        res.status(200).json({ 
+            message: "Investimento salvo com sucesso!", 
+            id: data[0]?.id,
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("Erro completo ao salvar investimento:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Rota para listar investimentos
+app.get('/api/investments', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('investments')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('Erro ao buscar investimentos:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Rota para obter um investimento específico
+app.get('/api/investments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data, error } = await supabase
+            .from('investments')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: "Investimento não encontrado" });
+        }
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('Erro ao buscar investimento:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Rota para atualizar um investimento
+app.put('/api/investments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        console.log(`Atualizando investimento ID: ${id}`);
+
+        const { data, error } = await supabase
+            .from('investments')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: "Investimento não encontrado" });
+        }
+
+        res.status(200).json({ 
+            message: "Investimento atualizado com sucesso!", 
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("Erro ao atualizar investimento:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Rota para excluir um investimento
+app.delete('/api/investments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`Excluindo investimento ID: ${id}`);
+
+        const { error } = await supabase
+            .from('investments')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: "Investimento excluído com sucesso!" 
+        });
+
+    } catch (error) {
+        console.error("Erro ao excluir investimento:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
 app.listen(port, () => {
     console.log(`Servidor rodando na porta ${port}`);
 });
+[file content end]
