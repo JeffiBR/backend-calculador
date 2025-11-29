@@ -30,6 +30,198 @@ app.get('/api/wake-up', (req, res) => {
     res.status(200).json({ message: "Servidor acordado e pronto!" });
 });
 
+// =============================================
+// ROTAS PARA CLIENTES IPTV
+// =============================================
+
+// Rota para salvar clientes IPTV
+app.post('/api/clientes', async (req, res) => {
+    try {
+        console.log('Recebendo requisição para salvar cliente IPTV...');
+        
+        const {
+            nome,
+            telefone,
+            valor_plano,
+            tipo,
+            tipo_plano,
+            data_vencimento,
+            revendedor,
+            servidor,
+            observacoes,
+            data_cadastro
+        } = req.body;
+
+        console.log('Dados do cliente recebidos:', {
+            nome,
+            telefone,
+            valor_plano,
+            tipo,
+            tipo_plano,
+            data_vencimento,
+            revendedor,
+            servidor,
+            observacoes
+        });
+
+        // Validar dados obrigatórios
+        if (!nome || !telefone || !valor_plano || !tipo || !tipo_plano || !data_vencimento || !servidor) {
+            return res.status(400).json({ 
+                error: "Dados obrigatórios faltando: nome, telefone, valor_plano, tipo, tipo_plano, data_vencimento e servidor são necessários" 
+            });
+        }
+
+        // Preparar dados para inserção
+        const dadosParaInserir = {
+            nome,
+            telefone,
+            valor_plano: parseFloat(valor_plano) || 0,
+            tipo,
+            tipo_plano,
+            data_vencimento,
+            revendedor: revendedor || null,
+            servidor,
+            observacoes: observacoes || null,
+            data_cadastro: data_cadastro || new Date().toISOString(),
+            status: 'ativo' // Status padrão
+        };
+
+        console.log('Inserindo cliente no banco de dados...');
+
+        // Inserir no Supabase
+        const { data, error } = await supabase
+            .from('clientes_iptv')
+            .insert([dadosParaInserir])
+            .select();
+
+        if (error) {
+            console.error('Erro ao inserir cliente no Supabase:', error);
+            throw error;
+        }
+
+        console.log('Cliente salvo com sucesso! ID:', data[0]?.id);
+
+        res.status(200).json({ 
+            message: "Cliente salvo com sucesso!", 
+            id: data[0]?.id,
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("Erro completo ao salvar cliente:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Rota para listar clientes
+app.get('/api/clientes', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('clientes_iptv')
+            .select('*')
+            .order('data_cadastro', { ascending: false });
+
+        if (error) throw error;
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('Erro ao buscar clientes:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Rota para obter um cliente específico
+app.get('/api/clientes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data, error } = await supabase
+            .from('clientes_iptv')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: "Cliente não encontrado" });
+        }
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('Erro ao buscar cliente:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Rota para atualizar um cliente
+app.put('/api/clientes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        console.log(`Atualizando cliente ID: ${id}`);
+
+        const { data, error } = await supabase
+            .from('clientes_iptv')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: "Cliente não encontrado" });
+        }
+
+        res.status(200).json({ 
+            message: "Cliente atualizado com sucesso!", 
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("Erro ao atualizar cliente:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Rota para excluir um cliente
+app.delete('/api/clientes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`Excluindo cliente ID: ${id}`);
+
+        const { error } = await supabase
+            .from('clientes_iptv')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: "Cliente excluído com sucesso!" 
+        });
+
+    } catch (error) {
+        console.error("Erro ao excluir cliente:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// =============================================
+// ROTAS EXISTENTES PARA PRODUTOS
+// =============================================
+
 // Rota de Salvamento de Produtos - CORRIGIDA
 app.post('/api/products', upload.single('produtoFoto'), async (req, res) => {
     try {
@@ -156,6 +348,10 @@ app.get('/api/products', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// =============================================
+// ROTAS EXISTENTES PARA INVESTIMENTOS
+// =============================================
 
 // Rota para salvar investimentos
 app.post('/api/investments', async (req, res) => {
@@ -335,7 +531,24 @@ app.delete('/api/investments/:id', async (req, res) => {
     }
 });
 
+// =============================================
+// INICIALIZAÇÃO DO SERVIDOR
+// =============================================
+
 app.listen(port, () => {
     console.log(`Servidor rodando na porta ${port}`);
+    console.log(`Rotas disponíveis:`);
+    console.log(`- GET  /api/wake-up`);
+    console.log(`- POST /api/clientes`);
+    console.log(`- GET  /api/clientes`);
+    console.log(`- GET  /api/clientes/:id`);
+    console.log(`- PUT  /api/clientes/:id`);
+    console.log(`- DELETE /api/clientes/:id`);
+    console.log(`- POST /api/products`);
+    console.log(`- GET  /api/products`);
+    console.log(`- POST /api/investments`);
+    console.log(`- GET  /api/investments`);
+    console.log(`- GET  /api/investments/:id`);
+    console.log(`- PUT  /api/investments/:id`);
+    console.log(`- DELETE /api/investments/:id`);
 });
-
