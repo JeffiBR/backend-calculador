@@ -348,7 +348,7 @@
             gap: 5px;
         }
         
-        /* Modal de Renovação */
+        /* Modal de Renovação - Ajustes de Responsividade */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -377,6 +377,8 @@
             box-shadow: var(--shadow);
             width: 100%;
             max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
             transform: translateY(20px);
             transition: transform 0.3s;
         }
@@ -391,6 +393,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
         }
         
         .modal-title {
@@ -427,6 +433,9 @@
             display: flex;
             justify-content: flex-end;
             gap: 10px;
+            position: sticky;
+            bottom: 0;
+            background: white;
         }
         
         .plano-option {
@@ -517,6 +526,19 @@
             border: 1px solid #c6f6d5;
         }
         
+        /* Novo estilo para o modal do WhatsApp */
+        .mensagem-container {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-line;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+        }
+        
         /* Loading */
         .loading {
             display: flex;
@@ -584,11 +606,52 @@
             .clientes-table td:nth-child(6) {
                 display: none;
             }
+            
+            /* Ajustes do Modal para Mobile */
+            .modal {
+                max-width: 95%;
+                margin: 10px;
+            }
+            
+            .modal-header {
+                padding: 15px;
+            }
+            
+            .modal-body {
+                padding: 15px;
+            }
+            
+            .modal-footer {
+                padding: 10px 15px;
+                flex-direction: column;
+            }
+            
+            .plano-option {
+                padding: 12px;
+            }
+            
+            .plano-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
         }
         
         @media (max-width: 480px) {
             .clientes-container {
                 padding: 10px;
+            }
+            
+            .filtros {
+                padding: 15px;
+            }
+            
+            .modal-title {
+                font-size: 1.1rem;
+            }
+            
+            .renovacao-info {
+                padding: 12px;
             }
         }
     </style>
@@ -677,6 +740,29 @@
                     <option value="Raryssa">Raryssa</option>
                     <option value="Rhuan">Rhuan</option>
                 </select>
+
+                <!-- Novo Filtro de Vencimento -->
+                <select id="vencimentoFilter" class="filter-select">
+                    <option value="">Todos os vencimentos</option>
+                    <option value="hoje">Vence Hoje</option>
+                    <option value="3_dias">Vence em 3 dias</option>
+                    <option value="7_dias">Vence em 7 dias</option>
+                    <option value="15_dias">Vence em 15 dias</option>
+                    <option value="30_dias">Vence em 30 dias</option>
+                    <option value="expirados">Expirados</option>
+                </select>
+
+                <!-- Novo Filtro de Valor do Plano -->
+                <select id="valorFilter" class="filter-select">
+                    <option value="">Todos os valores</option>
+                    <option value="13">R$ 13,00</option>
+                    <option value="15">R$ 15,00</option>
+                    <option value="20">R$ 20,00</option>
+                    <option value="35">R$ 35,00</option>
+                    <option value="50">R$ 50,00</option>
+                    <option value="100">R$ 100,00</option>
+                    <option value="180">R$ 180,00</option>
+                </select>
                 
                 <button id="refreshBtn" class="btn btn-primary">
                     <i class="fas fa-sync-alt"></i>
@@ -696,7 +782,7 @@
                 <table class="clientes-table">
                     <thead>
                         <tr>
-                            <th>Cliente</th>
+                            <th>Nome</th>
                             <th>Telefone</th>
                             <th>Tipo</th>
                             <th>Revendedor</th>
@@ -739,6 +825,14 @@
                         <span class="info-value" id="modalClienteNome">-</span>
                     </div>
                     <div class="info-item">
+                        <span class="info-label">Telefone:</span>
+                        <span class="info-value" id="modalClienteTelefone">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Tipo:</span>
+                        <span class="info-value" id="modalClienteTipo">-</span>
+                    </div>
+                    <div class="info-item">
                         <span class="info-label">Plano Atual:</span>
                         <span class="info-value" id="modalPlanoAtual">-</span>
                     </div>
@@ -746,46 +840,50 @@
                         <span class="info-label">Vencimento Atual:</span>
                         <span class="info-value" id="modalVencimentoAtual">-</span>
                     </div>
+                    <div class="info-item">
+                        <span class="info-label">Dias Restantes:</span>
+                        <span class="info-value" id="modalDiasRestantes">-</span>
+                    </div>
                 </div>
                 
                 <h3>Selecione o Plano de Renovação:</h3>
                 
-                <div class="plano-option" data-plano="1_mes" data-valor="20">
+                <div class="plano-option" data-plano="1_mes" data-valor-direto="20" data-valor-revenda="13">
                     <div class="plano-header">
                         <span class="plano-nome">1 Mês</span>
-                        <span class="plano-preco">R$ 20,00</span>
+                        <span class="plano-preco" id="preco-1-mes">R$ 20,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 30 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="2_mes" data-valor="35">
+                <div class="plano-option" data-plano="2_mes" data-valor-direto="35" data-valor-revenda="26">
                     <div class="plano-header">
                         <span class="plano-nome">2 Meses</span>
-                        <span class="plano-preco">R$ 35,00</span>
+                        <span class="plano-preco" id="preco-2-mes">R$ 35,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 60 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="3_mes" data-valor="50">
+                <div class="plano-option" data-plano="3_mes" data-valor-direto="50" data-valor-revenda="39">
                     <div class="plano-header">
                         <span class="plano-nome">3 Meses</span>
-                        <span class="plano-preco">R$ 50,00</span>
+                        <span class="plano-preco" id="preco-3-mes">R$ 50,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 90 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="6_mes" data-valor="100">
+                <div class="plano-option" data-plano="6_mes" data-valor-direto="100" data-valor-revenda="78">
                     <div class="plano-header">
                         <span class="plano-nome">6 Meses</span>
-                        <span class="plano-preco">R$ 100,00</span>
+                        <span class="plano-preco" id="preco-6-mes">R$ 100,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 180 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="1_ano" data-valor="180">
+                <div class="plano-option" data-plano="1_ano" data-valor-direto="180" data-valor-revenda="156">
                     <div class="plano-header">
                         <span class="plano-nome">1 Ano</span>
-                        <span class="plano-preco">R$ 180,00</span>
+                        <span class="plano-preco" id="preco-1-ano">R$ 180,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 365 dias</div>
                 </div>
@@ -808,6 +906,49 @@
         </div>
     </div>
 
+    <!-- NOVO MODAL PARA VISUALIZAR MENSAGEM DO WHATSAPP -->
+    <div class="modal-overlay" id="modalWhatsApp">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fab fa-whatsapp"></i>
+                    Mensagem de Cobrança
+                </h2>
+                <button class="modal-close" id="modalWhatsAppClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <i class="fas fa-info-circle"></i>
+                    Confira a mensagem antes de enviar
+                </div>
+                
+                <div class="mensagem-container" id="mensagemWhatsApp">
+                    <!-- A mensagem será inserida aqui via JavaScript -->
+                </div>
+                
+                <div class="renovacao-info">
+                    <div class="info-item">
+                        <span class="info-label">Cliente:</span>
+                        <span class="info-value" id="whatsappClienteNome">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Telefone:</span>
+                        <span class="info-value" id="whatsappClienteTelefone">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelarWhatsApp">Cancelar</button>
+                <button class="btn btn-success" id="enviarWhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                    Enviar via WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuração do Supabase
         const supabaseUrl = 'https://pcbtgvdcihowmtmqzhns.supabase.co';
@@ -816,6 +957,7 @@
         // Variáveis globais
         let clientes = [];
         let clienteAtual = null;
+        let clienteWhatsApp = null;
         
         // Menu mobile toggle
         const menuToggle = document.getElementById('menu-toggle');
@@ -834,11 +976,13 @@
         
         // Funções auxiliares
         function formatarData(data) {
+            if (!data) return '-';
             const [ano, mes, dia] = data.split('-');
             return `${dia}/${mes}/${ano}`;
         }
         
         function calcularDiasRestantes(dataVencimento) {
+            if (!dataVencimento) return 0;
             const hoje = new Date();
             const vencimento = new Date(dataVencimento);
             const diffTime = vencimento.getTime() - hoje.getTime();
@@ -876,14 +1020,40 @@
             }, 5000);
         }
         
-        // Função para enviar mensagem de cobrança via WhatsApp
-        function enviarMensagemCobranca(cliente) {
+        // Função para atualizar preços no modal baseado no tipo do cliente
+        function atualizarPrecosModal(tipoCliente) {
+            const planos = document.querySelectorAll('.plano-option');
+            
+            planos.forEach(plano => {
+                const precoElement = plano.querySelector('.plano-preco');
+                const valorDireto = plano.getAttribute('data-valor-direto');
+                const valorRevenda = plano.getAttribute('data-valor-revenda');
+                
+                if (tipoCliente === 'revenda') {
+                    precoElement.textContent = `R$ ${parseFloat(valorRevenda).toFixed(2)}`;
+                    plano.setAttribute('data-valor', valorRevenda);
+                } else {
+                    precoElement.textContent = `R$ ${parseFloat(valorDireto).toFixed(2)}`;
+                    plano.setAttribute('data-valor', valorDireto);
+                }
+            });
+        }
+        
+        // Função para gerar mensagem de cobrança
+        function gerarMensagemCobranca(cliente) {
             const dataVencimento = formatarData(cliente.data_vencimento);
             const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
             
+            // Definir preços baseado no tipo do cliente
+            const precoMensal = cliente.tipo === 'revenda' ? '13,00' : '20,00';
+            const precoBimestral = cliente.tipo === 'revenda' ? '26,00' : '35,00';
+            const precoTrimestral = cliente.tipo === 'revenda' ? '39,00' : '50,00';
+            const precoSemestral = cliente.tipo === 'revenda' ? '78,00' : '100,00';
+            const precoAnual = cliente.tipo === 'revenda' ? '156,00' : '180,00';
+            
             let mensagem = `🚨 Sua Assinatura de IPTV Está Prestes a Expirar! Renove Agora!
 
-Olá, ${cliente.home}! 👋
+Olá, ${cliente.nome || 'Cliente'}! 👋
 
 Estamos passando para lembrá-lo de que sua assinatura do IPTV está quase no fim. ⏳ Mas não se preocupe, você pode renovar facilmente e continuar curtindo seus programas e canais favoritos! 📺🎉
 
@@ -891,16 +1061,16 @@ Estamos passando para lembrá-lo de que sua assinatura do IPTV está quase no fi
 
 🔄 Opções de Renovação:
 
-Pacote Mensal: R$: 20,00 💰
-Pacote Bimestral: R$: 35,00💲
-Pacote Trimestral: R$: 50,00 💵
-Pacote Semestral: R$: 100,00 🤑
-Pacote Anual: R$: 200,00 💎
+Pacote Mensal: R$ ${precoMensal} 💰
+Pacote Bimestral: R$ ${precoBimestral} 💲
+Pacote Trimestral: R$ ${precoTrimestral} 💵
+Pacote Semestral: R$ ${precoSemestral} 🤑
+Pacote Anual: R$ ${precoAnual} 💎
 
 ✅✅Pagamento:
 🔑Chave Pix (Telefone):
-*(82)999158412*
-🏦Banco: Caixa Econômica Federal
+*(82)98716-8929*
+🏦Banco Cloudwalk 
 Jeferson Da Silva Santos
 
 Ficou com dúvidas ou precisa de ajuda? Estamos aqui para você! 😃
@@ -913,17 +1083,56 @@ Garanta seu entretenimento sem interrupções renovando hoje mesmo! 😎 Se prec
 Atenciosamente,
 Jeferson`;
             
+            return mensagem;
+        }
+        
+        // Função para enviar mensagem de cobrança via WhatsApp
+        function enviarMensagemWhatsApp(cliente) {
+            const mensagem = gerarMensagemCobranca(cliente);
+            
             // Codificar a mensagem para URL
             const mensagemCodificada = encodeURIComponent(mensagem);
             
             // Obter número de telefone do cliente (remover caracteres não numéricos)
-            const telefoneCliente = cliente.telefone.replace(/\D/g, '');
+            const telefoneCliente = cliente.telefone ? cliente.telefone.replace(/\D/g, '') : '';
+            
+            if (!telefoneCliente) {
+                mostrarAlerta('Telefone do cliente não encontrado', 'error');
+                return;
+            }
             
             // Criar URL do WhatsApp
             const urlWhatsApp = `https://wa.me/55${telefoneCliente}?text=${mensagemCodificada}`;
             
             // Abrir WhatsApp em nova aba
             window.open(urlWhatsApp, '_blank');
+        }
+        
+        // Abrir modal de visualização da mensagem do WhatsApp
+        function abrirModalWhatsApp(clienteId) {
+            clienteWhatsApp = clientes.find(c => c.id == clienteId);
+            
+            if (!clienteWhatsApp) {
+                mostrarAlerta('Cliente não encontrado', 'error');
+                return;
+            }
+            
+            // Preencher informações do modal
+            document.getElementById('whatsappClienteNome').textContent = clienteWhatsApp.nome || 'N/A';
+            document.getElementById('whatsappClienteTelefone').textContent = clienteWhatsApp.telefone || 'N/A';
+            
+            // Gerar e exibir a mensagem
+            const mensagem = gerarMensagemCobranca(clienteWhatsApp);
+            document.getElementById('mensagemWhatsApp').textContent = mensagem;
+            
+            // Abrir modal
+            document.getElementById('modalWhatsApp').classList.add('active');
+        }
+        
+        // Fechar modal do WhatsApp
+        function fecharModalWhatsApp() {
+            document.getElementById('modalWhatsApp').classList.remove('active');
+            clienteWhatsApp = null;
         }
         
         // Carregar clientes do Supabase
@@ -944,6 +1153,14 @@ Jeferson`;
                 }
                 
                 clientes = await response.json();
+                
+                // Ordenar clientes por dias restantes (menos dias primeiro)
+                clientes.sort((a, b) => {
+                    const diasA = calcularDiasRestantes(a.data_vencimento);
+                    const diasB = calcularDiasRestantes(b.data_vencimento);
+                    return diasA - diasB;
+                });
+                
                 renderizarClientes(clientes);
                 
             } catch (error) {
@@ -962,7 +1179,7 @@ Jeferson`;
             }
         }
         
-        // Renderizar clientes na tabela
+        // Renderizar clientes na tabela - CORRIGIDO para usar campo "nome"
         function renderizarClientes(clientesParaRenderizar) {
             const tbody = document.getElementById('clientesTableBody');
             tbody.innerHTML = '';
@@ -989,12 +1206,12 @@ Jeferson`;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${cliente.home}</td>
-                    <td>${cliente.telefone}</td>
+                    <td>${cliente.nome || 'N/A'}</td>
+                    <td>${cliente.telefone || 'N/A'}</td>
                     <td>${cliente.tipo === 'direto' ? 'Direto' : 'Revenda'}</td>
                     <td>${cliente.revendedor || '-'}</td>
                     <td>${obterNomePlano(cliente.tipo_plano)}</td>
-                    <td>${cliente.servidor}</td>
+                    <td>${cliente.servidor || '-'}</td>
                     <td>${formatarData(cliente.data_vencimento)}</td>
                     <td class="dias-restantes ${classeDias}">${diasRestantes} dias</td>
                     <td><span class="status-badge status-${status}">${status}</span></td>
@@ -1021,14 +1238,11 @@ Jeferson`;
                 });
             });
             
-            // Adicionar event listeners aos botões do WhatsApp
+            // Adicionar event listeners aos botões do WhatsApp - MODIFICADO
             document.querySelectorAll('.whatsapp-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const clienteId = this.getAttribute('data-id');
-                    const cliente = clientes.find(c => c.id == clienteId);
-                    if (cliente) {
-                        enviarMensagemCobranca(cliente);
-                    }
+                    abrirModalWhatsApp(clienteId);
                 });
             });
         }
@@ -1042,10 +1256,18 @@ Jeferson`;
                 return;
             }
             
+            const diasRestantes = calcularDiasRestantes(clienteAtual.data_vencimento);
+            
             // Preencher informações do modal
-            document.getElementById('modalClienteNome').textContent = clienteAtual.home;
+            document.getElementById('modalClienteNome').textContent = clienteAtual.nome || 'N/A';
+            document.getElementById('modalClienteTelefone').textContent = clienteAtual.telefone || 'N/A';
+            document.getElementById('modalClienteTipo').textContent = clienteAtual.tipo === 'direto' ? 'Direto' : 'Revenda';
             document.getElementById('modalPlanoAtual').textContent = obterNomePlano(clienteAtual.tipo_plano);
             document.getElementById('modalVencimentoAtual').textContent = formatarData(clienteAtual.data_vencimento);
+            document.getElementById('modalDiasRestantes').textContent = `${diasRestantes} dias`;
+            
+            // Atualizar preços baseado no tipo do cliente
+            atualizarPrecosModal(clienteAtual.tipo);
             
             // Resetar seleção de plano
             document.querySelectorAll('.plano-option').forEach(option => {
@@ -1138,7 +1360,7 @@ Jeferson`;
                     clientes[clienteIndex].data_vencimento = novaDataVencimento;
                 }
                 
-                mostrarAlerta(`Plano de ${clienteAtual.home} renovado com sucesso!`, 'success');
+                mostrarAlerta(`Plano de ${clienteAtual.nome} renovado com sucesso!`, 'success');
                 renderizarClientes(clientes);
                 fecharModalRenovacao();
                 
@@ -1154,11 +1376,13 @@ Jeferson`;
             const statusFilter = document.getElementById('statusFilter').value;
             const servidorFilter = document.getElementById('servidorFilter').value;
             const revendedorFilter = document.getElementById('revendedorFilter').value;
+            const vencimentoFilter = document.getElementById('vencimentoFilter').value;
+            const valorFilter = document.getElementById('valorFilter').value;
             
             const clientesFiltrados = clientes.filter(cliente => {
                 // Filtro por busca
-                const matchSearch = cliente.home.toLowerCase().includes(searchTerm) || 
-                                   cliente.telefone.includes(searchTerm);
+                const matchSearch = (cliente.nome && cliente.nome.toLowerCase().includes(searchTerm)) || 
+                                   (cliente.telefone && cliente.telefone.includes(searchTerm));
                 
                 // Filtro por status
                 const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
@@ -1171,7 +1395,35 @@ Jeferson`;
                 // Filtro por revendedor
                 const matchRevendedor = !revendedorFilter || cliente.revendedor === revendedorFilter;
                 
-                return matchSearch && matchStatus && matchServidor && matchRevendedor;
+                // Filtro por vencimento
+                let matchVencimento = true;
+                if (vencimentoFilter) {
+                    switch(vencimentoFilter) {
+                        case 'hoje':
+                            matchVencimento = diasRestantes === 0;
+                            break;
+                        case '3_dias':
+                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 3;
+                            break;
+                        case '7_dias':
+                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 7;
+                            break;
+                        case '15_dias':
+                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 15;
+                            break;
+                        case '30_dias':
+                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 30;
+                            break;
+                        case 'expirados':
+                            matchVencimento = diasRestantes < 0;
+                            break;
+                    }
+                }
+                
+                // Filtro por valor do plano
+                const matchValor = !valorFilter || cliente.valor_plano == valorFilter;
+                
+                return matchSearch && matchStatus && matchServidor && matchRevendedor && matchVencimento && matchValor;
             });
             
             renderizarClientes(clientesFiltrados);
@@ -1187,6 +1439,8 @@ Jeferson`;
             document.getElementById('statusFilter').addEventListener('change', filtrarClientes);
             document.getElementById('servidorFilter').addEventListener('change', filtrarClientes);
             document.getElementById('revendedorFilter').addEventListener('change', filtrarClientes);
+            document.getElementById('vencimentoFilter').addEventListener('change', filtrarClientes);
+            document.getElementById('valorFilter').addEventListener('change', filtrarClientes);
             document.getElementById('refreshBtn').addEventListener('click', carregarClientes);
             
             // Event listeners para o modal de renovação
@@ -1215,6 +1469,16 @@ Jeferson`;
                     document.getElementById('novoVencimentoContainer').style.display = 'block';
                     document.getElementById('confirmarRenovacao').disabled = false;
                 });
+            });
+            
+            // NOVOS EVENT LISTENERS PARA O MODAL DO WHATSAPP
+            document.getElementById('modalWhatsAppClose').addEventListener('click', fecharModalWhatsApp);
+            document.getElementById('cancelarWhatsApp').addEventListener('click', fecharModalWhatsApp);
+            document.getElementById('enviarWhatsApp').addEventListener('click', function() {
+                if (clienteWhatsApp) {
+                    enviarMensagemWhatsApp(clienteWhatsApp);
+                    fecharModalWhatsApp();
+                }
             });
         });
     </script>
