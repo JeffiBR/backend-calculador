@@ -906,7 +906,7 @@
         </div>
     </div>
 
-    <!-- NOVO MODAL PARA VISUALIZAR MENSAGEM DO WHATSAPP -->
+    <!-- Modal para visualizar mensagem de cobrança WhatsApp -->
     <div class="modal-overlay" id="modalWhatsApp">
         <div class="modal">
             <div class="modal-header">
@@ -949,6 +949,53 @@
         </div>
     </div>
 
+    <!-- NOVO MODAL PARA CONFIRMAÇÃO DE RENOVAÇÃO -->
+    <div class="modal-overlay" id="modalConfirmacaoRenovacao">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-check-circle"></i>
+                    Renovação Confirmada
+                </h2>
+                <button class="modal-close" id="modalConfirmacaoClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    Renovação realizada com sucesso!
+                </div>
+                
+                <div class="mensagem-container" id="mensagemConfirmacao">
+                    <!-- A mensagem será inserida aqui via JavaScript -->
+                </div>
+                
+                <div class="renovacao-info">
+                    <div class="info-item">
+                        <span class="info-label">Cliente:</span>
+                        <span class="info-value" id="confirmacaoClienteNome">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Plano:</span>
+                        <span class="info-value" id="confirmacaoPlano">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Novo Vencimento:</span>
+                        <span class="info-value" id="confirmacaoVencimento">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="fecharConfirmacao">Fechar</button>
+                <button class="btn btn-success" id="enviarConfirmacaoWhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                    Enviar Confirmação
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuração do Supabase
         const supabaseUrl = 'https://pcbtgvdcihowmtmqzhns.supabase.co';
@@ -958,6 +1005,7 @@
         let clientes = [];
         let clienteAtual = null;
         let clienteWhatsApp = null;
+        let clienteRenovado = null;
         
         // Menu mobile toggle
         const menuToggle = document.getElementById('menu-toggle');
@@ -1039,7 +1087,7 @@
             });
         }
         
-        // Função para gerar mensagem de cobrança
+        // Função para gerar mensagem de cobrança - SEM EMOJIS
         function gerarMensagemCobranca(cliente) {
             const dataVencimento = formatarData(cliente.data_vencimento);
             const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
@@ -1051,34 +1099,34 @@
             const precoSemestral = cliente.tipo === 'revenda' ? '78,00' : '100,00';
             const precoAnual = cliente.tipo === 'revenda' ? '156,00' : '180,00';
             
-            let mensagem = `🚨 Sua Assinatura de IPTV Está Prestes a Expirar! Renove Agora!
+            let mensagem = `SUA ASSINATURA DE IPTV ESTÁ PRESTES A EXPIRAR! RENOVE AGORA!
 
-Olá, ${cliente.nome || 'Cliente'}! 👋
+Olá, ${cliente.nome || 'Cliente'}!
 
-Estamos passando para lembrá-lo de que sua assinatura do IPTV está quase no fim. ⏳ Mas não se preocupe, você pode renovar facilmente e continuar curtindo seus programas e canais favoritos! 📺🎉
+Estamos passando para lembrá-lo de que sua assinatura do IPTV está quase no fim. Mas não se preocupe, você pode renovar facilmente e continuar curtindo seus programas e canais favoritos!
 
-📅 Data de Expiração: ${dataVencimento}
+Data de Expiração: ${dataVencimento}
 
-🔄 Opções de Renovação:
+Opções de Renovação:
 
-Pacote Mensal: R$ ${precoMensal} 💰
-Pacote Bimestral: R$ ${precoBimestral} 💲
-Pacote Trimestral: R$ ${precoTrimestral} 💵
-Pacote Semestral: R$ ${precoSemestral} 🤑
-Pacote Anual: R$ ${precoAnual} 💎
+• Pacote Mensal: R$ ${precoMensal}
+• Pacote Bimestral: R$ ${precoBimestral}
+• Pacote Trimestral: R$ ${precoTrimestral}
+• Pacote Semestral: R$ ${precoSemestral}
+• Pacote Anual: R$ ${precoAnual}
 
-✅✅Pagamento:
-🔑Chave Pix (Telefone):
-*(82)98716-8929*
-🏦Banco Cloudwalk 
+Pagamento:
+Chave Pix (Telefone):
+(82) 98716-8929
+Banco Cloudwalk
 Jeferson Da Silva Santos
 
-Ficou com dúvidas ou precisa de ajuda? Estamos aqui para você! 😃
+Ficou com dúvidas ou precisa de ajuda? Estamos aqui para você!
 
-📞 Entre em contato:
-WhatsApp: *(82) 9 9915-8412* 📲
+Entre em contato:
+WhatsApp: (82) 9 9915-8412
 
-Garanta seu entretenimento sem interrupções renovando hoje mesmo! 😎 Se precisar de ajuda, estamos aqui para você! 💬
+Garanta seu entretenimento sem interrupções renovando hoje mesmo! Se precisar de ajuda, estamos aqui para você!
 
 Atenciosamente,
 Jeferson`;
@@ -1086,10 +1134,31 @@ Jeferson`;
             return mensagem;
         }
         
-        // Função para enviar mensagem de cobrança via WhatsApp
-        function enviarMensagemWhatsApp(cliente) {
-            const mensagem = gerarMensagemCobranca(cliente);
+        // Função para gerar mensagem de confirmação de renovação - SEM EMOJIS
+        function gerarMensagemConfirmacao(cliente, plano, dataVencimento) {
+            const nomePlano = obterNomePlano(plano);
             
+            let mensagem = `RENOVAÇÃO CONFIRMADA! SEU ACESSO AO IPTV ESTÁ ATIVO
+
+Olá, ${cliente.nome}!
+
+Temos o prazer de informar que a sua renovação do nosso serviço de IPTV foi confirmada com sucesso. Agora, você pode continuar desfrutando de todos os seus canais e conteúdos favoritos sem interrupções!
+
+Detalhes da Renovação:
+
+Plano Escolhido: ${nomePlano}
+Data de Expiração: ${dataVencimento}
+
+Agradecemos por continuar conosco! Estamos felizes em oferecer a você o melhor do entretenimento com nosso serviço de IPTV.
+
+Atenciosamente,
+Jeferson`;
+            
+            return mensagem;
+        }
+        
+        // Função para enviar mensagem via WhatsApp
+        function enviarMensagemWhatsApp(cliente, mensagem) {
             // Codificar a mensagem para URL
             const mensagemCodificada = encodeURIComponent(mensagem);
             
@@ -1133,6 +1202,30 @@ Jeferson`;
         function fecharModalWhatsApp() {
             document.getElementById('modalWhatsApp').classList.remove('active');
             clienteWhatsApp = null;
+        }
+        
+        // Abrir modal de confirmação de renovação
+        function abrirModalConfirmacao(cliente, plano, dataVencimento) {
+            // Salvar o cliente renovado
+            clienteRenovado = cliente;
+            
+            // Preencher informações do modal
+            document.getElementById('confirmacaoClienteNome').textContent = cliente.nome || 'N/A';
+            document.getElementById('confirmacaoPlano').textContent = obterNomePlano(plano);
+            document.getElementById('confirmacaoVencimento').textContent = formatarData(dataVencimento);
+            
+            // Gerar e exibir a mensagem
+            const mensagem = gerarMensagemConfirmacao(cliente, plano, formatarData(dataVencimento));
+            document.getElementById('mensagemConfirmacao').textContent = mensagem;
+            
+            // Abrir modal
+            document.getElementById('modalConfirmacaoRenovacao').classList.add('active');
+        }
+        
+        // Fechar modal de confirmação
+        function fecharModalConfirmacao() {
+            document.getElementById('modalConfirmacaoRenovacao').classList.remove('active');
+            clienteRenovado = null;
         }
         
         // Carregar clientes do Supabase
@@ -1360,9 +1453,17 @@ Jeferson`;
                     clientes[clienteIndex].data_vencimento = novaDataVencimento;
                 }
                 
-                mostrarAlerta(`Plano de ${clienteAtual.nome} renovado com sucesso!`, 'success');
-                renderizarClientes(clientes);
+                // SALVAR O CLIENTE ANTES DE FECHAR O MODAL
+                const clienteRenovacao = {...clienteAtual};
+                
+                // Fechar modal de renovação
                 fecharModalRenovacao();
+                
+                // Abrir modal de confirmação
+                abrirModalConfirmacao(clienteRenovacao, tipoPlano, novaDataVencimento);
+                
+                // Atualizar a tabela
+                renderizarClientes(clientes);
                 
             } catch (error) {
                 console.error('Erro ao renovar plano:', error);
@@ -1471,13 +1572,25 @@ Jeferson`;
                 });
             });
             
-            // NOVOS EVENT LISTENERS PARA O MODAL DO WHATSAPP
+            // Event listeners para o modal do WhatsApp
             document.getElementById('modalWhatsAppClose').addEventListener('click', fecharModalWhatsApp);
             document.getElementById('cancelarWhatsApp').addEventListener('click', fecharModalWhatsApp);
             document.getElementById('enviarWhatsApp').addEventListener('click', function() {
                 if (clienteWhatsApp) {
-                    enviarMensagemWhatsApp(clienteWhatsApp);
+                    const mensagem = gerarMensagemCobranca(clienteWhatsApp);
+                    enviarMensagemWhatsApp(clienteWhatsApp, mensagem);
                     fecharModalWhatsApp();
+                }
+            });
+            
+            // NOVOS EVENT LISTENERS PARA O MODAL DE CONFIRMAÇÃO
+            document.getElementById('modalConfirmacaoClose').addEventListener('click', fecharModalConfirmacao);
+            document.getElementById('fecharConfirmacao').addEventListener('click', fecharModalConfirmacao);
+            document.getElementById('enviarConfirmacaoWhatsApp').addEventListener('click', function() {
+                if (clienteRenovado) {
+                    const mensagem = document.getElementById('mensagemConfirmacao').textContent;
+                    enviarMensagemWhatsApp(clienteRenovado, mensagem);
+                    fecharModalConfirmacao();
                 }
             });
         });
