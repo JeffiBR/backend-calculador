@@ -96,17 +96,20 @@
             background-color: var(--light-color);
         }
         
+        /* Mobile Navigation - AGORA NA PARTE DE CIMA */
         .mobile-nav {
             display: none;
             background: white;
-            border-radius: 0 0 var(--radius) var(--radius);
             box-shadow: var(--shadow);
             padding: 15px;
-            position: absolute;
-            top: 100%;
+            position: fixed;
+            top: 0;
             left: 0;
             right: 0;
-            z-index: 1000;
+            z-index: 2000;
+            width: 100%;
+            max-height: 100vh;
+            overflow-y: auto;
         }
         
         .mobile-nav.active {
@@ -117,6 +120,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            margin-top: 10px;
         }
         
         .mobile-nav-link {
@@ -133,6 +137,27 @@
         .mobile-nav-link:hover, .mobile-nav-link.active {
             background-color: var(--light-color);
             color: var(--primary-color);
+        }
+        
+        /* Botão de fechar no mobile nav */
+        .mobile-nav-close {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        
+        .mobile-nav-close:hover {
+            background-color: var(--light-color);
+            color: var(--text-dark);
         }
         
         /* Main Content */
@@ -588,6 +613,10 @@
                 display: block;
             }
             
+            .mobile-nav-close {
+                display: block;
+            }
+            
             .filtros-container {
                 flex-direction: column;
                 align-items: stretch;
@@ -649,18 +678,6 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 5px;
-            }
-            
-            /* Melhorias no menu mobile */
-            .mobile-nav {
-                border-radius: 0;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            }
-            
-            .mobile-nav-link {
-                padding: 15px;
-                border-radius: 6px;
-                font-size: 1rem;
             }
         }
         
@@ -737,6 +754,10 @@
         </h1>
         
         <div class="nav-links">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-home"></i>
+                Início
+            </a>
             <a href="dashboard.html" class="nav-link">
                 <i class="fas fa-chart-line"></i>
                 Dashboard
@@ -753,6 +774,14 @@
                 <i class="fas fa-redo-alt"></i>
                 Renovação
             </a>
+            <a href="investimentos.html" class="nav-link">
+                <i class="fas fa-chart-pie"></i>
+                Investimentos
+            </a>
+            <a href="products.html" class="nav-link">
+                <i class="fas fa-box"></i>
+                Produtos
+            </a>
         </div>
         
         <button class="menu-toggle" id="menu-toggle">
@@ -760,9 +789,16 @@
         </button>
     </div>
     
-    <!-- Mobile Navigation -->
+    <!-- Mobile Navigation - AGORA NA PARTE DE CIMA -->
     <div class="mobile-nav" id="mobile-nav">
+        <button class="mobile-nav-close" id="mobile-nav-close">
+            <i class="fas fa-times"></i>
+        </button>
         <div class="mobile-nav-links">
+            <a href="index.html" class="mobile-nav-link">
+                <i class="fas fa-home"></i>
+                Início
+            </a>
             <a href="dashboard.html" class="mobile-nav-link">
                 <i class="fas fa-chart-line"></i>
                 Dashboard
@@ -778,6 +814,14 @@
             <a href="clientesrenovacao.html" class="mobile-nav-link active">
                 <i class="fas fa-redo-alt"></i>
                 Renovação
+            </a>
+            <a href="investimentos.html" class="mobile-nav-link">
+                <i class="fas fa-chart-pie"></i>
+                Investimentos
+            </a>
+            <a href="products.html" class="mobile-nav-link">
+                <i class="fas fa-box"></i>
+                Produtos
             </a>
         </div>
     </div>
@@ -920,42 +964,82 @@
                 
                 <h3>Selecione o Plano de Renovação:</h3>
                 
-                <div class="plano-option" data-plano="1_mes" data-valor-direto="20" data-valor-revenda="13">
+                <div class="plano-option" data-plano="1_mes_sem_adultos" data-valor-direto="20" data-valor-revenda="13">
                     <div class="plano-header">
-                        <span class="plano-nome">1 Mês</span>
-                        <span class="plano-preco" id="preco-1-mes">R$ 20,00</span>
+                        <span class="plano-nome">1 Mês (Sem Adultos)</span>
+                        <span class="plano-preco" id="preco-1-mes-sem">R$ 20,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 30 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="2_mes" data-valor-direto="35" data-valor-revenda="26">
+                <div class="plano-option" data-plano="1_mes_com_adultos" data-valor-direto="20" data-valor-revenda="13">
                     <div class="plano-header">
-                        <span class="plano-nome">2 Meses</span>
-                        <span class="plano-preco" id="preco-2-mes">R$ 35,00</span>
+                        <span class="plano-nome">1 Mês (Com Adultos)</span>
+                        <span class="plano-preco" id="preco-1-mes-com">R$ 20,00</span>
+                    </div>
+                    <div class="plano-desc">Renovação por 30 dias</div>
+                </div>
+                
+                <div class="plano-option" data-plano="2_mes_sem_adultos" data-valor-direto="35" data-valor-revenda="26">
+                    <div class="plano-header">
+                        <span class="plano-nome">2 Meses (Sem Adultos)</span>
+                        <span class="plano-preco" id="preco-2-mes-sem">R$ 35,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 60 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="3_mes" data-valor-direto="50" data-valor-revenda="39">
+                <div class="plano-option" data-plano="2_mes_com_adultos" data-valor-direto="35" data-valor-revenda="26">
                     <div class="plano-header">
-                        <span class="plano-nome">3 Meses</span>
-                        <span class="plano-preco" id="preco-3-mes">R$ 50,00</span>
+                        <span class="plano-nome">2 Meses (Com Adultos)</span>
+                        <span class="plano-preco" id="preco-2-mes-com">R$ 35,00</span>
+                    </div>
+                    <div class="plano-desc">Renovação por 60 dias</div>
+                </div>
+                
+                <div class="plano-option" data-plano="3_mes_sem_adultos" data-valor-direto="50" data-valor-revenda="39">
+                    <div class="plano-header">
+                        <span class="plano-nome">3 Meses (Sem Adultos)</span>
+                        <span class="plano-preco" id="preco-3-mes-sem">R$ 50,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 90 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="6_mes" data-valor-direto="100" data-valor-revenda="78">
+                <div class="plano-option" data-plano="3_mes_com_adultos" data-valor-direto="50" data-valor-revenda="39">
                     <div class="plano-header">
-                        <span class="plano-nome">6 Meses</span>
-                        <span class="plano-preco" id="preco-6-mes">R$ 100,00</span>
+                        <span class="plano-nome">3 Meses (Com Adultos)</span>
+                        <span class="plano-preco" id="preco-3-mes-com">R$ 50,00</span>
+                    </div>
+                    <div class="plano-desc">Renovação por 90 dias</div>
+                </div>
+                
+                <div class="plano-option" data-plano="6_mes_sem_adultos" data-valor-direto="100" data-valor-revenda="78">
+                    <div class="plano-header">
+                        <span class="plano-nome">6 Meses (Sem Adultos)</span>
+                        <span class="plano-preco" id="preco-6-mes-sem">R$ 100,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 180 dias</div>
                 </div>
                 
-                <div class="plano-option" data-plano="1_ano" data-valor-direto="180" data-valor-revenda="156">
+                <div class="plano-option" data-plano="6_mes_com_adultos" data-valor-direto="100" data-valor-revenda="78">
                     <div class="plano-header">
-                        <span class="plano-nome">1 Ano</span>
-                        <span class="plano-preco" id="preco-1-ano">R$ 180,00</span>
+                        <span class="plano-nome">6 Meses (Com Adultos)</span>
+                        <span class="plano-preco" id="preco-6-mes-com">R$ 100,00</span>
+                    </div>
+                    <div class="plano-desc">Renovação por 180 dias</div>
+                </div>
+                
+                <div class="plano-option" data-plano="1_ano_sem_adultos" data-valor-direto="180" data-valor-revenda="156">
+                    <div class="plano-header">
+                        <span class="plano-nome">1 Ano (Sem Adultos)</span>
+                        <span class="plano-preco" id="preco-1-ano-sem">R$ 180,00</span>
+                    </div>
+                    <div class="plano-desc">Renovação por 365 dias</div>
+                </div>
+                
+                <div class="plano-option" data-plano="1_ano_com_adultos" data-valor-direto="180" data-valor-revenda="156">
+                    <div class="plano-header">
+                        <span class="plano-nome">1 Ano (Com Adultos)</span>
+                        <span class="plano-preco" id="preco-1-ano-com">R$ 180,00</span>
                     </div>
                     <div class="plano-desc">Renovação por 365 dias</div>
                 </div>
@@ -1082,16 +1166,14 @@
         // Menu mobile toggle
         const menuToggle = document.getElementById('menu-toggle');
         const mobileNav = document.getElementById('mobile-nav');
+        const mobileNavClose = document.getElementById('mobile-nav-close');
         
         menuToggle.addEventListener('click', () => {
             mobileNav.classList.toggle('active');
         });
         
-        // Fechar menu mobile ao clicar fora
-        document.addEventListener('click', (event) => {
-            if (!menuToggle.contains(event.target) && !mobileNav.contains(event.target)) {
-                mobileNav.classList.remove('active');
-            }
+        mobileNavClose.addEventListener('click', () => {
+            mobileNav.classList.remove('active');
         });
         
         // Fechar menu mobile ao clicar em um link
@@ -1125,11 +1207,16 @@
         
         function obterNomePlano(valor) {
             const planos = {
-                '1_mes': '1 Mês',
-                '2_mes': '2 Meses',
-                '3_mes': '3 Meses',
-                '6_mes': '6 Meses',
-                '1_ano': '1 Ano'
+                '1_mes_sem_adultos': 'Plano de 1 Mês (Sem Adultos)',
+                '1_mes_com_adultos': 'Plano de 1 Mês (Com Adultos)',
+                '2_mes_sem_adultos': 'Plano de 2 Meses (Sem Adultos)',
+                '2_mes_com_adultos': 'Plano de 2 Meses (Com Adultos)',
+                '3_mes_sem_adultos': 'Plano de 3 Meses (Sem Adultos)',
+                '3_mes_com_adultos': 'Plano de 3 Meses (Com Adultos)',
+                '6_mes_sem_adultos': 'Plano de 6 Meses (Sem Adultos)',
+                '6_mes_com_adultos': 'Plano de 6 Meses (Com Adultos)',
+                '1_ano_sem_adultos': 'Plano de 1 Ano (Sem Adultos)',
+                '1_ano_com_adultos': 'Plano de 1 Ano (Com Adultos)'
             };
             return planos[valor] || valor;
         }
@@ -1171,7 +1258,7 @@
             const dataVencimento = formatarData(cliente.data_vencimento);
             const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
             
-            // Definir preços baseado no tipo do cliente
+            // Definir preços baseado no tipo do cliente (mesmo preço para com e sem adultos)
             const precoMensal = cliente.tipo === 'revenda' ? '13,00' : '20,00';
             const precoBimestral = cliente.tipo === 'revenda' ? '26,00' : '35,00';
             const precoTrimestral = cliente.tipo === 'revenda' ? '39,00' : '50,00';
@@ -1188,11 +1275,16 @@ Data de Expiração: ${dataVencimento}
 
 Opções de Renovação:
 
-• Pacote Mensal: R$ ${precoMensal}
-• Pacote Bimestral: R$ ${precoBimestral}
-• Pacote Trimestral: R$ ${precoTrimestral}
-• Pacote Semestral: R$ ${precoSemestral}
-• Pacote Anual: R$ ${precoAnual}
+• Plano Mensal (Sem Adultos): R$ ${precoMensal}
+• Plano Mensal (Com Adultos): R$ ${precoMensal}
+• Plano Bimestral (Sem Adultos): R$ ${precoBimestral}
+• Plano Bimestral (Com Adultos): R$ ${precoBimestral}
+• Plano Trimestral (Sem Adultos): R$ ${precoTrimestral}
+• Plano Trimestral (Com Adultos): R$ ${precoTrimestral}
+• Plano Semestral (Sem Adultos): R$ ${precoSemestral}
+• Plano Semestral (Com Adultos): R$ ${precoSemestral}
+• Plano Anual (Sem Adultos): R$ ${precoAnual}
+• Plano Anual (Com Adultos): R$ ${precoAnual}
 
 Pagamento:
 Chave Pix (Telefone):
@@ -1470,19 +1562,24 @@ Jeferson`;
             }
             
             switch(planoSelecionado) {
-                case '1_mes':
+                case '1_mes_sem_adultos':
+                case '1_mes_com_adultos':
                     novaData.setMonth(novaData.getMonth() + 1);
                     break;
-                case '2_mes':
+                case '2_mes_sem_adultos':
+                case '2_mes_com_adultos':
                     novaData.setMonth(novaData.getMonth() + 2);
                     break;
-                case '3_mes':
+                case '3_mes_sem_adultos':
+                case '3_mes_com_adultos':
                     novaData.setMonth(novaData.getMonth() + 3);
                     break;
-                case '6_mes':
+                case '6_mes_sem_adultos':
+                case '6_mes_com_adultos':
                     novaData.setMonth(novaData.getMonth() + 6);
                     break;
-                case '1_ano':
+                case '1_ano_sem_adultos':
+                case '1_ano_com_adultos':
                     novaData.setFullYear(novaData.getFullYear() + 1);
                     break;
             }
