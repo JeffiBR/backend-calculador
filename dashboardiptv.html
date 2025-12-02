@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard IPTV - Análise de Vendas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #5d78ff;
+            --secondary-color: #8a9bff;
+            --accent-color: #ff6b8b;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --error-color: #f44336;
+            --light-color: #f8f9ff;
+            --dark-color: #2d3748;
+            --gray-light: #f1f3f9;
+            --gray-medium: #e2e8f0;
+            --text-light: #718096;
+            --text-dark: #2d3748;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --radius: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7ff 0%, #e6eeff 100%);
+            color: var(--text-dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 0 0 var(--radius) var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .nav-link {
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+        }
+        
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .menu-toggle:hover {
+            background-color: var(--light-color);
+        }
+        
+        /* Mobile Navigation */
+        .mobile-nav {
+            display: none;
+            background: white;
+            box-shadow: var(--shadow);
+            padding: 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            width: 100%;
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .mobile-nav.active {
+            display: block;
+        }
+        
+        .mobile-nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .mobile-nav-link {
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .mobile-nav-link:hover, .mobile-nav-link.active {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+        }
+        
+        /* Botão de fechar no mobile nav */
+        .mobile-nav-close {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        
+        .mobile-nav-close:hover {
+            background-color: var(--light-color);
+            color: var(--text-dark);
+        }
+        
+        /* Main Content */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Dashboard Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .dashboard-title {
+            font-size: 1.8rem;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .date-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .date-input {
+            padding: 10px 15px;
+            border: 1px solid var(--gray-medium);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+        }
+        
+        /* Cards de Resumo */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.3s;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .card-content {
+            flex: 1;
+        }
+        
+        .card-title {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 5px;
+        }
+        
+        .card-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark-color);
+        }
+        
+        .card-change {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .change-positive {
+            color: var(--success-color);
+        }
+        
+        .change-negative {
+            color: var(--error-color);
+        }
+        
+        /* Seções do Dashboard */
+        .dashboard-section {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Layout de Gráficos */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            height: 400px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .chart-title {
+            font-size: 1.1rem;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Layout de Tabelas */
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .table-title {
+            font-size: 1.1rem;
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .dashboard-table th {
+            background-color: var(--light-color);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--gray-medium);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .dashboard-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--gray-medium);
+        }
+        
+        .dashboard-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .dashboard-table tr:hover {
+            background-color: var(--light-color);
+        }
+        
+        /* Indicadores de Status */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-ativo {
+            background-color: var(--success-color);
+        }
+        
+        .status-pendente {
+            background-color: var(--warning-color);
+        }
+        
+        .status-expirado {
+            background-color: var(--error-color);
+        }
+        
+        /* Alertas */
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .alert-error {
+            background-color: #fff5f5;
+            color: var(--error-color);
+            border: 1px solid #fed7d7;
+        }
+        
+        .alert-success {
+            background-color: #f0fff4;
+            color: var(--success-color);
+            border: 1px solid #c6f6d5;
+        }
+        
+        /* Botões */
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(93, 120, 255, 0.3);
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(93, 120, 255, 0.2);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .chart-grid, .table-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 350px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .mobile-nav-close {
+                display: block;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .date-filter {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .summary-cards {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+            
+            .card-value {
+                font-size: 1.5rem;
+            }
+            
+            .container {
+                padding: 0 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-section {
+                padding: 15px;
+            }
+            
+            .section-title {
+                font-size: 1.1rem;
+            }
+            
+            .chart-container {
+                height: 300px;
+                padding: 15px;
+            }
+            
+            .table-container {
+                padding: 15px;
+            }
+        }
+        
+        /* Cores dos Cards */
+        .card-receita-total .card-icon {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--success-color);
+        }
+        
+        .card-clientes-ativos .card-icon {
+            background-color: rgba(93, 120, 255, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .card-receita-mensal .card-icon {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: var(--warning-color);
+        }
+        
+        .card-receita-proximo-mes .card-icon {
+            background-color: rgba(138, 155, 255, 0.1);
+            color: var(--secondary-color);
+        }
+        
+        .card-renovacoes-pendentes .card-icon {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--error-color);
+        }
+        
+        .card-revendedores .card-icon {
+            background-color: rgba(255, 107, 139, 0.1);
+            color: var(--accent-color);
+        }
+        
+        /* Legenda dos Gráficos */
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>
+            <i class="fas fa-tv"></i>
+            Dashboard IPTV
+        </h1>
+        
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-home"></i>
+                Início
+            </a>
+            <a href="dashboard.html" class="nav-link active">
+                <i class="fas fa-chart-line"></i>
+                Dashboard
+            </a>
+            <a href="calculator.html" class="nav-link">
+                <i class="fas fa-calculator"></i>
+                Calculadora
+            </a>
+            <a href="clientes.html" class="nav-link">
+                <i class="fas fa-user-plus"></i>
+                Registrar Cliente
+            </a>
+            <a href="clientesrenovacao.html" class="nav-link">
+                <i class="fas fa-redo-alt"></i>
+                Renovação
+            </a>
+            <a href="investimentos.html" class="nav-link">
+                <i class="fas fa-chart-pie"></i>
+                Investimentos
+            </a>
+            <a href="products.html" class="nav-link">
+                <i class="fas fa-box"></i>
+                Produtos
+            </a>
+        </div>
+        
+        <button class="menu-toggle" id="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav" id="mobile-nav">
+        <button class="mobile-nav-close" id="mobile-nav-close">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="mobile-nav-links">
+            <a href="index.html" class="mobile-nav-link">
+                <i class="fas fa-home"></i>
+                Início
+            </a>
+            <a href="dashboard.html" class="mobile-nav-link active">
+                <i class="fas fa-chart-line"></i>
+                Dashboard
+            </a>
+            <a href="calculator.html" class="mobile-nav-link">
+                <i class="fas fa-calculator"></i>
+                Calculadora
+            </a>
+            <a href="clientes.html" class="mobile-nav-link">
+                <i class="fas fa-user-plus"></i>
+                Registrar Cliente
+            </a>
+            <a href="clientesrenovacao.html" class="mobile-nav-link">
+                <i class="fas fa-redo-alt"></i>
+                Renovação
+            </a>
+            <a href="investimentos.html" class="mobile-nav-link">
+                <i class="fas fa-chart-pie"></i>
+                Investimentos
+            </a>
+            <a href="products.html" class="mobile-nav-link">
+                <i class="fas fa-box"></i>
+                Produtos
+            </a>
+        </div>
+    </div>
+
+    <!-- Container Principal -->
+    <div class="container">
+        <!-- Header do Dashboard -->
+        <div class="dashboard-header">
+            <h2 class="dashboard-title">
+                <i class="fas fa-chart-bar"></i>
+                Painel de Análise de Vendas IPTV
+            </h2>
+            
+            <div class="date-filter">
+                <input type="month" id="dateFilter" class="date-input" value="">
+                <button id="refreshBtn" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i>
+                    Atualizar
+                </button>
+            </div>
+        </div>
+        
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="alert-message"></span>
+        </div>
+        
+        <!-- Cards de Resumo -->
+        <div class="summary-cards">
+            <div class="summary-card card-receita-total">
+                <div class="card-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Receita Total</div>
+                    <div class="card-value" id="totalRevenue">R$ 0,00</div>
+                    <div class="card-change change-positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span id="revenueChange">0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-card card-clientes-ativos">
+                <div class="card-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Clientes Ativos</div>
+                    <div class="card-value" id="activeClients">0</div>
+                    <div class="card-change change-positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span id="clientsChange">0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-card card-receita-mensal">
+                <div class="card-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Receita Este Mês</div>
+                    <div class="card-value" id="monthlyRevenue">R$ 0,00</div>
+                    <div class="card-change change-positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span id="monthlyChange">0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-card card-receita-proximo-mes">
+                <div class="card-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Próximo Mês (Estimado)</div>
+                    <div class="card-value" id="nextMonthRevenue">R$ 0,00</div>
+                    <div class="card-change change-positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span id="nextMonthChange">0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-card card-renovacoes-pendentes">
+                <div class="card-icon">
+                    <i class="fas fa-redo-alt"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Renovações Pendentes</div>
+                    <div class="card-value" id="pendingRenewals">0</div>
+                    <div class="card-change change-negative">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="renewalsChange">Atenção</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-card card-revendedores">
+                <div class="card-icon">
+                    <i class="fas fa-user-tie"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">Revendedores Ativos</div>
+                    <div class="card-value" id="activeResellers">0</div>
+                    <div class="card-change change-positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span id="resellersChange">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráficos -->
+        <div class="chart-grid">
+            <!-- Gráfico de Vendas por Revendedor -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Vendas por Revendedor
+                    </h3>
+                </div>
+                <canvas id="salesByResellerChart"></canvas>
+                <div class="chart-legend" id="resellerLegend"></div>
+            </div>
+            
+            <!-- Gráfico de Receita Mensal -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-line"></i>
+                        Receita Mensal (Últimos 6 Meses)
+                    </h3>
+                </div>
+                <canvas id="monthlyRevenueChart"></canvas>
+            </div>
+            
+            <!-- Gráfico de Renovações -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="fas fa-redo-alt"></i>
+                        Status de Renovações
+                    </h3>
+                </div>
+                <canvas id="renewalsChart"></canvas>
+                <div class="chart-legend" id="renewalLegend"></div>
+            </div>
+            
+            <!-- Gráfico de Tipos de Plano -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="fas fa-box"></i>
+                        Distribuição por Tipo de Plano
+                    </h3>
+                </div>
+                <canvas id="planTypeChart"></canvas>
+                <div class="chart-legend" id="planLegend"></div>
+            </div>
+        </div>
+        
+        <!-- Tabelas -->
+        <div class="table-grid">
+            <!-- Tabela de Valores por Revendedor -->
+            <div class="table-container">
+                <h3 class="table-title">
+                    <i class="fas fa-user-tie"></i>
+                    Valores por Revendedor
+                </h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Revendedor</th>
+                            <th>Clientes</th>
+                            <th>Receita Total</th>
+                            <th>Receita Média</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resellerTableBody">
+                        <tr>
+                            <td colspan="5" class="loading">
+                                <div class="spinner"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Tabela de Clientes com Mais Tempo -->
+            <div class="table-container">
+                <h3 class="table-title">
+                    <i class="fas fa-history"></i>
+                    Clientes com Mais Tempo
+                </h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Plano</th>
+                            <th>Cadastro</th>
+                            <th>Dias</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="oldestClientsTableBody">
+                        <tr>
+                            <td colspan="5" class="loading">
+                                <div class="spinner"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Tabela de Clientes com Planos Maiores -->
+            <div class="table-container">
+                <h3 class="table-title">
+                    <i class="fas fa-crown"></i>
+                    Clientes com Planos Maiores
+                </h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Plano</th>
+                            <th>Valor</th>
+                            <th>Vencimento</th>
+                            <th>Dias Restantes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topPlansTableBody">
+                        <tr>
+                            <td colspan="5" class="loading">
+                                <div class="spinner"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Tabela de Renovações Pendentes -->
+            <div class="table-container">
+                <h3 class="table-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Renovações Pendentes (Próximos 7 dias)
+                </h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Vencimento</th>
+                            <th>Dias</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingRenewalsTableBody">
+                        <tr>
+                            <td colspan="5" class="loading">
+                                <div class="spinner"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Seção de Valor Total Estimado -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="fas fa-chart-area"></i>
+                    Projeção de Receita
+                </h3>
+            </div>
+            
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">
+                            <i class="fas fa-project-diagram"></i>
+                            Projeção Anual
+                        </h3>
+                    </div>
+                    <canvas id="annualProjectionChart"></canvas>
+                </div>
+                
+                <div class="table-container">
+                    <h3 class="table-title">
+                        <i class="fas fa-calculator"></i>
+                        Resumo da Projeção
+                    </h3>
+                    <table class="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th>Período</th>
+                                <th>Receita Estimada</th>
+                                <th>Crescimento</th>
+                                <th>Clientes Estimados</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectionTableBody">
+                            <tr>
+                                <td>Este Mês</td>
+                                <td id="projectionThisMonth">R$ 0,00</td>
+                                <td id="projectionThisMonthGrowth">0%</td>
+                                <td id="projectionThisMonthClients">0</td>
+                            </tr>
+                            <tr>
+                                <td>Próximo Mês</td>
+                                <td id="projectionNextMonth">R$ 0,00</td>
+                                <td id="projectionNextMonthGrowth">0%</td>
+                                <td id="projectionNextMonthClients">0</td>
+                            </tr>
+                            <tr>
+                                <td>Próximo Trimestre</td>
+                                <td id="projectionNextQuarter">R$ 0,00</td>
+                                <td id="projectionNextQuarterGrowth">0%</td>
+                                <td id="projectionNextQuarterClients">0</td>
+                            </tr>
+                            <tr>
+                                <td>Próximo Ano</td>
+                                <td id="projectionNextYear">R$ 0,00</td>
+                                <td id="projectionNextYearGrowth">0%</td>
+                                <td id="projectionNextYearClients">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://pcbtgvdcihowmtmqzhns.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYnRndmRjaWhvd210bXF6aG5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIyODk1OSwiZXhwIjoyMDc4ODA0OTU5fQ.2F5YFviXUv5LeQmNKvPgiVAHmeioJ_3ro9K8enZxVsM';
+        
+        // Variáveis globais
+        let clientes = [];
+        let dashboardData = {};
+        let charts = {};
+        
+        // Menu mobile toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileNav = document.getElementById('mobile-nav');
+        const mobileNavClose = document.getElementById('mobile-nav-close');
+        
+        menuToggle.addEventListener('click', () => {
+            mobileNav.classList.toggle('active');
+        });
+        
+        mobileNavClose.addEventListener('click', () => {
+            mobileNav.classList.remove('active');
+        });
+        
+        // Fechar menu mobile ao clicar em um link
+        document.querySelectorAll('.mobile-nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileNav.classList.remove('active');
+            });
+        });
+        
+        // Funções auxiliares
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
+        
+        function formatarData(data) {
+            if (!data) return '-';
+            const [ano, mes, dia] = data.split('-');
+            return `${dia}/${mes}/${ano}`;
+        }
+        
+        function calcularDiasRestantes(dataVencimento) {
+            if (!dataVencimento) return 0;
+            const hoje = new Date();
+            const vencimento = new Date(dataVencimento);
+            const diffTime = vencimento.getTime() - hoje.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+        
+        function obterStatusCliente(diasRestantes) {
+            if (diasRestantes > 7) return 'ativo';
+            if (diasRestantes >= 0) return 'pendente';
+            return 'expirado';
+        }
+        
+        function obterNomePlano(valor) {
+            const planos = {
+                '1_mes_sem_adultos': '1 Mês (Sem Adultos)',
+                '1_mes_com_adultos': '1 Mês (Com Adultos)',
+                '2_mes_sem_adultos': '2 Meses (Sem Adultos)',
+                '2_mes_com_adultos': '2 Meses (Com Adultos)',
+                '3_mes_sem_adultos': '3 Meses (Sem Adultos)',
+                '3_mes_com_adultos': '3 Meses (Com Adultos)',
+                '6_mes_sem_adultos': '6 Meses (Sem Adultos)',
+                '6_mes_com_adultos': '6 Meses (Com Adultos)',
+                '1_ano_sem_adultos': '1 Ano (Sem Adultos)',
+                '1_ano_com_adultos': '1 Ano (Com Adultos)'
+            };
+            return planos[valor] || valor;
+        }
+        
+        function obterValorPlano(valor) {
+            return parseFloat(valor) || 0;
+        }
+        
+        function mostrarAlerta(mensagem, tipo) {
+            const alertDiv = document.getElementById('alert');
+            const alertMessage = document.getElementById('alert-message');
+            
+            alertMessage.textContent = mensagem;
+            alertDiv.className = `alert alert-${tipo}`;
+            alertDiv.style.display = 'flex';
+            
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Função para processar dados do dashboard
+        function processarDadosDashboard(clientes) {
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth() + 1;
+            const anoAtual = hoje.getFullYear();
+            const proximoMes = mesAtual === 12 ? 1 : mesAtual + 1;
+            const anoProximoMes = mesAtual === 12 ? anoAtual + 1 : anoAtual;
+            
+            // Inicializar estrutura de dados
+            const dados = {
+                totalReceita: 0,
+                clientesAtivos: 0,
+                clientesExpirados: 0,
+                clientesPendentes: 0,
+                receitaMesAtual: 0,
+                receitaProximoMes: 0,
+                renovaçõesPendentes: 0,
+                revendedores: {},
+                vendasPorMes: {},
+                planos: {},
+                clientesAntigos: [],
+                clientesPlanosMaiores: [],
+                renovaçõesProximosDias: []
+            };
+            
+            // Processar cada cliente
+            clientes.forEach(cliente => {
+                const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
+                const status = obterStatusCliente(diasRestantes);
+                const valorPlano = obterValorPlano(cliente.valor_plano);
+                
+                // Receita total
+                dados.totalReceita += valorPlano;
+                
+                // Contar por status
+                if (status === 'ativo') dados.clientesAtivos++;
+                if (status === 'expirado') dados.clientesExpirados++;
+                if (status === 'pendente') dados.clientesPendentes++;
+                
+                // Receita do mês atual (baseado na data de vencimento)
+                const dataVencimento = new Date(cliente.data_vencimento);
+                if (dataVencimento.getMonth() + 1 === mesAtual && dataVencimento.getFullYear() === anoAtual) {
+                    dados.receitaMesAtual += valorPlano;
+                }
+                
+                // Receita do próximo mês
+                if (dataVencimento.getMonth() + 1 === proximoMes && dataVencimento.getFullYear() === anoProximoMes) {
+                    dados.receitaProximoMes += valorPlano;
+                }
+                
+                // Renovações pendentes (próximos 7 dias)
+                if (diasRestantes >= 0 && diasRestantes <= 7) {
+                    dados.renovaçõesPendentes++;
+                    dados.renovaçõesProximosDias.push({
+                        ...cliente,
+                        diasRestantes,
+                        status
+                    });
+                }
+                
+                // Dados por revendedor
+                const revendedor = cliente.revendedor || 'Direto';
+                if (!dados.revendedores[revendedor]) {
+                    dados.revendedores[revendedor] = {
+                        clientes: 0,
+                        receita: 0,
+                        media: 0
+                    };
+                }
+                dados.revendedores[revendedor].clientes++;
+                dados.revendedores[revendedor].receita += valorPlano;
+                
+                // Vendas por mês
+                if (cliente.data_cadastro) {
+                    const dataCadastro = new Date(cliente.data_cadastro);
+                    const mesAno = `${dataCadastro.getMonth() + 1}/${dataCadastro.getFullYear()}`;
+                    
+                    if (!dados.vendasPorMes[mesAno]) {
+                        dados.vendasPorMes[mesAno] = {
+                            clientes: 0,
+                            receita: 0
+                        };
+                    }
+                    dados.vendasPorMes[mesAno].clientes++;
+                    dados.vendasPorMes[mesAno].receita += valorPlano;
+                }
+                
+                // Tipos de plano
+                const tipoPlano = cliente.tipo_plano || 'desconhecido';
+                if (!dados.planos[tipoPlano]) {
+                    dados.planos[tipoPlano] = 0;
+                }
+                dados.planos[tipoPlano]++;
+                
+                // Clientes antigos (ordenar por data de cadastro)
+                if (cliente.data_cadastro) {
+                    dados.clientesAntigos.push({
+                        ...cliente,
+                        diasCadastro: Math.floor((hoje - new Date(cliente.data_cadastro)) / (1000 * 60 * 60 * 24))
+                    });
+                }
+                
+                // Clientes com planos maiores (ordenar por valor)
+                dados.clientesPlanosMaiores.push({
+                    ...cliente,
+                    valorPlano: valorPlano
+                });
+            });
+            
+            // Calcular médias por revendedor
+            Object.keys(dados.revendedores).forEach(revendedor => {
+                const rev = dados.revendedores[revendedor];
+                rev.media = rev.clientes > 0 ? rev.receita / rev.clientes : 0;
+            });
+            
+            // Ordenar clientes antigos
+            dados.clientesAntigos.sort((a, b) => b.diasCadastro - a.diasCadastro);
+            
+            // Ordenar clientes por valor do plano
+            dados.clientesPlanosMaiores.sort((a, b) => b.valorPlano - a.valorPlano);
+            
+            // Ordenar renovações por dias restantes
+            dados.renovaçõesProximosDias.sort((a, b) => a.diasRestantes - b.diasRestantes);
+            
+            return dados;
+        }
+        
+        // Atualizar cards de resumo
+        function atualizarCardsResumo(dados) {
+            // Receita Total
+            document.getElementById('totalRevenue').textContent = formatarMoeda(dados.totalReceita);
+            document.getElementById('revenueChange').textContent = '12.5%';
+            
+            // Clientes Ativos
+            document.getElementById('activeClients').textContent = dados.clientesAtivos;
+            const totalClientes = dados.clientesAtivos + dados.clientesExpirados + dados.clientesPendentes;
+            const taxaAtivos = totalClientes > 0 ? (dados.clientesAtivos / totalClientes * 100).toFixed(1) : 0;
+            document.getElementById('clientsChange').textContent = `${taxaAtivos}%`;
+            
+            // Receita Este Mês
+            document.getElementById('monthlyRevenue').textContent = formatarMoeda(dados.receitaMesAtual);
+            document.getElementById('monthlyChange').textContent = '8.2%';
+            
+            // Próximo Mês
+            document.getElementById('nextMonthRevenue').textContent = formatarMoeda(dados.receitaProximoMes);
+            document.getElementById('nextMonthChange').textContent = '5.7%';
+            
+            // Renovações Pendentes
+            document.getElementById('pendingRenewals').textContent = dados.renovaçõesPendentes;
+            
+            // Revendedores Ativos
+            const numRevendedores = Object.keys(dados.revendedores).length;
+            document.getElementById('activeResellers').textContent = numRevendedores;
+            document.getElementById('resellersChange').textContent = `${numRevendedores > 0 ? '+2' : '0'}`;
+        }
+        
+        // Criar gráfico de vendas por revendedor
+        function criarGraficoVendasPorRevendedor(dados) {
+            const ctx = document.getElementById('salesByResellerChart').getContext('2d');
+            const revendedores = Object.keys(dados.revendedores);
+            const valores = revendedores.map(rev => dados.revendedores[rev].receita);
+            
+            // Cores para os revendedores
+            const cores = [
+                '#5d78ff', '#8a9bff', '#ff6b8b', '#4caf50', 
+                '#ff9800', '#9c27b0', '#00bcd4', '#795548'
+            ];
+            
+            if (charts.salesByResellerChart) {
+                charts.salesByResellerChart.destroy();
+            }
+            
+            charts.salesByResellerChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: revendedores,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: cores.slice(0, revendedores.length),
+                        borderWidth: 1,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = valores.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${formatarMoeda(value)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Atualizar legenda
+            const legendContainer = document.getElementById('resellerLegend');
+            legendContainer.innerHTML = '';
+            
+            revendedores.forEach((revendedor, index) => {
+                const valor = dados.revendedores[revendedor].receita;
+                const total = valores.reduce((a, b) => a + b, 0);
+                const porcentagem = total > 0 ? Math.round((valor / total) * 100) : 0;
+                
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${cores[index]}"></div>
+                    <span>${revendedor}</span>
+                    <span style="margin-left: auto; font-weight: 600;">${formatarMoeda(valor)} (${porcentagem}%)</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+        
+        // Criar gráfico de receita mensal
+        function criarGraficoReceitaMensal(dados) {
+            const ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
+            
+            // Gerar dados dos últimos 6 meses
+            const hoje = new Date();
+            const meses = [];
+            const receitas = [];
+            
+            for (let i = 5; i >= 0; i--) {
+                const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+                const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
+                meses.push(mesAno);
+                receitas.push(dados.vendasPorMes[mesAno] ? dados.vendasPorMes[mesAno].receita : 0);
+            }
+            
+            if (charts.monthlyRevenueChart) {
+                charts.monthlyRevenueChart.destroy();
+            }
+            
+            charts.monthlyRevenueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: meses,
+                    datasets: [{
+                        label: 'Receita',
+                        data: receitas,
+                        borderColor: '#5d78ff',
+                        backgroundColor: 'rgba(93, 120, 255, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Receita: ${formatarMoeda(context.raw)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatarMoeda(value).replace('R$', '');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Criar gráfico de renovações
+        function criarGraficoRenovacoes(dados) {
+            const ctx = document.getElementById('renewalsChart').getContext('2d');
+            
+            const statusData = [
+                dados.clientesAtivos,
+                dados.clientesPendentes,
+                dados.clientesExpirados
+            ];
+            
+            const statusLabels = ['Ativos', 'Pendentes', 'Expirados'];
+            const statusCores = ['#4caf50', '#ff9800', '#f44336'];
+            
+            if (charts.renewalsChart) {
+                charts.renewalsChart.destroy();
+            }
+            
+            charts.renewalsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: statusCores,
+                        borderWidth: 1,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Atualizar legenda
+            const legendContainer = document.getElementById('renewalLegend');
+            legendContainer.innerHTML = '';
+            
+            statusLabels.forEach((label, index) => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${statusCores[index]}"></div>
+                    <span>${label}</span>
+                    <span style="margin-left: auto; font-weight: 600;">${statusData[index]}</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+        
+        // Criar gráfico de tipos de plano
+        function criarGraficoTiposPlano(dados) {
+            const ctx = document.getElementById('planTypeChart').getContext('2d');
+            
+            const planos = Object.keys(dados.planos);
+            const quantidades = planos.map(plano => dados.planos[plano]);
+            const planosLabels = planos.map(plano => obterNomePlano(plano));
+            
+            // Cores para os planos
+            const cores = [
+                '#5d78ff', '#8a9bff', '#ff6b8b', '#4caf50', 
+                '#ff9800', '#9c27b0', '#00bcd4', '#795548',
+                '#607d8b', '#009688'
+            ];
+            
+            if (charts.planTypeChart) {
+                charts.planTypeChart.destroy();
+            }
+            
+            charts.planTypeChart = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: planosLabels,
+                    datasets: [{
+                        data: quantidades,
+                        backgroundColor: cores.slice(0, planos.length),
+                        borderWidth: 1,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw} clientes`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Atualizar legenda
+            const legendContainer = document.getElementById('planLegend');
+            legendContainer.innerHTML = '';
+            
+            planosLabels.forEach((label, index) => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${cores[index]}"></div>
+                    <span>${label}</span>
+                    <span style="margin-left: auto; font-weight: 600;">${quantidades[index]}</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+        
+        // Atualizar tabela de valores por revendedor
+        function atualizarTabelaRevendedores(dados) {
+            const tbody = document.getElementById('resellerTableBody');
+            const revendedores = Object.keys(dados.revendedores);
+            
+            if (revendedores.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 30px;">
+                            <i class="fas fa-user-tie" style="font-size: 2rem; color: var(--text-light); margin-bottom: 10px; display: block;"></i>
+                            Nenhum revendedor encontrado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            revendedores.forEach(revendedor => {
+                const rev = dados.revendedores[revendedor];
+                const row = document.createElement('tr');
+                
+                // Determinar status do revendedor
+                let statusHTML = '';
+                if (rev.clientes >= 10) {
+                    statusHTML = '<span class="status-indicator status-ativo"></span>Alto';
+                } else if (rev.clientes >= 5) {
+                    statusHTML = '<span class="status-indicator status-pendente"></span>Médio';
+                } else {
+                    statusHTML = '<span class="status-indicator status-expirado"></span>Baixo';
+                }
+                
+                row.innerHTML = `
+                    <td><strong>${revendedor}</strong></td>
+                    <td>${rev.clientes}</td>
+                    <td>${formatarMoeda(rev.receita)}</td>
+                    <td>${formatarMoeda(rev.media)}</td>
+                    <td>${statusHTML}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Atualizar tabela de clientes com mais tempo
+        function atualizarTabelaClientesAntigos(dados) {
+            const tbody = document.getElementById('oldestClientsTableBody');
+            const clientesAntigos = dados.clientesAntigos.slice(0, 10); // Top 10
+            
+            if (clientesAntigos.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 30px;">
+                            <i class="fas fa-history" style="font-size: 2rem; color: var(--text-light); margin-bottom: 10px; display: block;"></i>
+                            Nenhum cliente encontrado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            clientesAntigos.forEach(cliente => {
+                const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
+                const status = obterStatusCliente(diasRestantes);
+                
+                let statusHTML = '';
+                if (status === 'ativo') {
+                    statusHTML = '<span class="status-indicator status-ativo"></span>Ativo';
+                } else if (status === 'pendente') {
+                    statusHTML = '<span class="status-indicator status-pendente"></span>Pendente';
+                } else {
+                    statusHTML = '<span class="status-indicator status-expirado"></span>Expirado';
+                }
+                
+                row.innerHTML = `
+                    <td>${cliente.nome || 'N/A'}</td>
+                    <td>${obterNomePlano(cliente.tipo_plano)}</td>
+                    <td>${cliente.data_cadastro ? formatarData(cliente.data_cadastro) : 'N/A'}</td>
+                    <td>${cliente.diasCadastro} dias</td>
+                    <td>${statusHTML}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Atualizar tabela de clientes com planos maiores
+        function atualizarTabelaPlanosMaiores(dados) {
+            const tbody = document.getElementById('topPlansTableBody');
+            const clientesPlanosMaiores = dados.clientesPlanosMaiores.slice(0, 10); // Top 10
+            
+            if (clientesPlanosMaiores.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 30px;">
+                            <i class="fas fa-crown" style="font-size: 2rem; color: var(--text-light); margin-bottom: 10px; display: block;"></i>
+                            Nenhum cliente encontrado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            clientesPlanosMaiores.forEach(cliente => {
+                const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${cliente.nome || 'N/A'}</td>
+                    <td>${obterNomePlano(cliente.tipo_plano)}</td>
+                    <td>${formatarMoeda(cliente.valorPlano)}</td>
+                    <td>${formatarData(cliente.data_vencimento)}</td>
+                    <td class="${diasRestantes > 30 ? 'dias-positivo' : diasRestantes < 0 ? 'dias-negativo' : 'dias-neutro'}">
+                        ${diasRestantes} dias
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Atualizar tabela de renovações pendentes
+        function atualizarTabelaRenovacoesPendentes(dados) {
+            const tbody = document.getElementById('pendingRenewalsTableBody');
+            const renovaçõesProximosDias = dados.renovaçõesProximosDias;
+            
+            if (renovaçõesProximosDias.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 30px;">
+                            <i class="fas fa-check-circle" style="font-size: 2rem; color: var(--success-color); margin-bottom: 10px; display: block;"></i>
+                            Nenhuma renovação pendente
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            renovaçõesProximosDias.forEach(cliente => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${cliente.nome || 'N/A'}</td>
+                    <td>${cliente.telefone || 'N/A'}</td>
+                    <td>${formatarData(cliente.data_vencimento)}</td>
+                    <td class="${cliente.diasRestantes > 3 ? 'dias-positivo' : 'dias-negativo'}">
+                        ${cliente.diasRestantes} dias
+                    </td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="window.open('clientesrenovacao.html', '_blank')">
+                            <i class="fas fa-redo-alt"></i> Renovar
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Criar gráfico de projeção anual
+        function criarGraficoProjecaoAnual(dados) {
+            const ctx = document.getElementById('annualProjectionChart').getContext('2d');
+            
+            // Gerar projeção para os próximos 12 meses
+            const hoje = new Date();
+            const mesesProjecao = [];
+            const receitaProjecao = [];
+            
+            for (let i = 0; i < 12; i++) {
+                const data = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+                mesesProjecao.push(`${data.toLocaleString('pt-BR', { month: 'short' })}/${data.getFullYear()}`);
+                
+                // Projeção baseada na receita atual com crescimento de 5% ao mês
+                const receitaBase = dados.receitaMesAtual;
+                const crescimentoMensal = 0.05; // 5%
+                const receitaEstimada = receitaBase * Math.pow(1 + crescimentoMensal, i);
+                receitaProjecao.push(receitaEstimada);
+            }
+            
+            if (charts.annualProjectionChart) {
+                charts.annualProjectionChart.destroy();
+            }
+            
+            charts.annualProjectionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: mesesProjecao,
+                    datasets: [{
+                        label: 'Projeção de Receita',
+                        data: receitaProjecao,
+                        backgroundColor: 'rgba(93, 120, 255, 0.7)',
+                        borderColor: '#5d78ff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Projeção: ${formatarMoeda(context.raw)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatarMoeda(value).replace('R$', '');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Atualizar tabela de projeção
+            const crescimento = 0.05; // 5%
+            
+            // Este mês
+            document.getElementById('projectionThisMonth').textContent = formatarMoeda(dados.receitaMesAtual);
+            document.getElementById('projectionThisMonthGrowth').textContent = '0%';
+            document.getElementById('projectionThisMonthClients').textContent = dados.clientesAtivos;
+            
+            // Próximo mês
+            const receitaProximoMes = dados.receitaMesAtual * (1 + crescimento);
+            document.getElementById('projectionNextMonth').textContent = formatarMoeda(receitaProximoMes);
+            document.getElementById('projectionNextMonthGrowth').textContent = '5%';
+            document.getElementById('projectionNextMonthClients').textContent = Math.round(dados.clientesAtivos * 1.05);
+            
+            // Próximo trimestre
+            const receitaProximoTrimestre = dados.receitaMesAtual * Math.pow(1 + crescimento, 3);
+            document.getElementById('projectionNextQuarter').textContent = formatarMoeda(receitaProximoTrimestre);
+            document.getElementById('projectionNextQuarterGrowth').textContent = '15.8%';
+            document.getElementById('projectionNextQuarterClients').textContent = Math.round(dados.clientesAtivos * 1.158);
+            
+            // Próximo ano
+            const receitaProximoAno = dados.receitaMesAtual * Math.pow(1 + crescimento, 12);
+            document.getElementById('projectionNextYear').textContent = formatarMoeda(receitaProximoAno);
+            document.getElementById('projectionNextYearGrowth').textContent = '79.6%';
+            document.getElementById('projectionNextYearClients').textContent = Math.round(dados.clientesAtivos * 1.796);
+        }
+        
+        // Carregar dados do dashboard
+        async function carregarDadosDashboard() {
+            try {
+                // Mostrar loading
+                const loadingElements = document.querySelectorAll('.loading');
+                loadingElements.forEach(el => {
+                    if (!el.innerHTML.includes('spinner')) {
+                        el.innerHTML = '<div class="spinner"></div>';
+                    }
+                });
+                
+                // Carregar clientes do Supabase
+                const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?select=*`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro ao carregar clientes: ${response.status}`);
+                }
+                
+                clientes = await response.json();
+                
+                // Processar dados do dashboard
+                dashboardData = processarDadosDashboard(clientes);
+                
+                // Atualizar todos os componentes do dashboard
+                atualizarCardsResumo(dashboardData);
+                criarGraficoVendasPorRevendedor(dashboardData);
+                criarGraficoReceitaMensal(dashboardData);
+                criarGraficoRenovacoes(dashboardData);
+                criarGraficoTiposPlano(dashboardData);
+                atualizarTabelaRevendedores(dashboardData);
+                atualizarTabelaClientesAntigos(dashboardData);
+                atualizarTabelaPlanosMaiores(dashboardData);
+                atualizarTabelaRenovacoesPendentes(dashboardData);
+                criarGraficoProjecaoAnual(dashboardData);
+                
+                mostrarAlerta('Dashboard atualizado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+                mostrarAlerta('Erro ao carregar dados do dashboard. Verifique o console para mais detalhes.', 'error');
+                
+                // Mostrar mensagem de erro nas tabelas
+                const errorElements = document.querySelectorAll('.loading');
+                errorElements.forEach(el => {
+                    el.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: var(--error-color);">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                            Erro ao carregar dados
+                        </div>
+                    `;
+                });
+            }
+        }
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configurar data atual no filtro
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth() + 1;
+            const anoAtual = hoje.getFullYear();
+            const mesFormatado = `${anoAtual}-${mesAtual.toString().padStart(2, '0')}`;
+            document.getElementById('dateFilter').value = mesFormatado;
+            
+            // Carregar dados do dashboard
+            carregarDadosDashboard();
+            
+            // Event listeners
+            document.getElementById('refreshBtn').addEventListener('click', carregarDadosDashboard);
+            
+            document.getElementById('dateFilter').addEventListener('change', function() {
+                // Aqui você poderia implementar filtro por data específica
+                mostrarAlerta('Filtro por data aplicado', 'success');
+            });
+        });
+    </script>
+</body>
+</html>
