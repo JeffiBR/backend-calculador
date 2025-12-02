@@ -6,7 +6,7 @@
     <title>Registro de Clientes IPTV</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Estilos do Menu - Copiados da Calculadora */
+        /* Estilos do Menu - Atualizados para ficar igual à página de Renovação */
         :root {
             --primary-color: #5d78ff;
             --secondary-color: #8a9bff;
@@ -48,6 +48,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
         
         .header h1 {
@@ -87,15 +88,29 @@
             font-size: 1.5rem;
             color: var(--primary-color);
             cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
         }
         
+        .menu-toggle:hover {
+            background-color: var(--light-color);
+        }
+        
+        /* Mobile Navigation - AGORA NA PARTE DE CIMA - IGUAL À PÁGINA DE RENOVAÇÃO */
         .mobile-nav {
             display: none;
             background: white;
-            border-radius: var(--radius);
             box-shadow: var(--shadow);
-            margin-bottom: 20px;
             padding: 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            width: 100%;
+            max-height: 100vh;
+            overflow-y: auto;
         }
         
         .mobile-nav.active {
@@ -106,6 +121,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            margin-top: 10px;
         }
         
         .mobile-nav-link {
@@ -122,6 +138,27 @@
         .mobile-nav-link:hover, .mobile-nav-link.active {
             background-color: var(--light-color);
             color: var(--primary-color);
+        }
+        
+        /* Botão de fechar no mobile nav - NOVO */
+        .mobile-nav-close {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        
+        .mobile-nav-close:hover {
+            background-color: var(--light-color);
+            color: var(--text-dark);
         }
         
         /* Main Content */
@@ -274,6 +311,17 @@
             background-color: #3d8b40;
         }
         
+        .btn-whatsapp {
+            background-color: #25D366;
+            color: white;
+        }
+        
+        .btn-whatsapp:hover {
+            background-color: #1da851;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(37, 211, 102, 0.3);
+        }
+        
         .buttons {
             display: flex;
             gap: 12px;
@@ -378,6 +426,81 @@
             font-style: italic;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 90%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-medium);
+        }
+
+        .modal-message {
+            white-space: pre-line;
+            line-height: 1.6;
+            background-color: var(--light-color);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin-bottom: 20px;
+            border: 1px solid var(--gray-medium);
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
         /* Responsive - Menu */
         @media (max-width: 768px) {
             .header {
@@ -393,6 +516,10 @@
             }
             
             .menu-toggle {
+                display: block;
+            }
+            
+            .mobile-nav-close {
                 display: block;
             }
         }
@@ -429,6 +556,14 @@
             .previa {
                 padding: 15px;
             }
+            
+            .modal-footer {
+                flex-direction: column;
+            }
+            
+            .modal-footer .btn {
+                width: 100%;
+            }
         }
 
         /* Ajustes para telas muito pequenas (menos de 480px) */
@@ -456,74 +591,86 @@
     </style>
 </head>
 <body>
-   <!-- Header - Igual ao Dashboard -->
-<div class="header">
-    <h1>
-        <i class="fas fa-users"></i>
-        Registro de Clientes IPTV
-    </h1>
-    
-    <div class="nav-links">
-        <a href="index.html" class="nav-link">
-            <i class="fas fa-home"></i>
-            Início
-        </a>
-        <a href="dashboard.html" class="nav-link">
-            <i class="fas fa-chart-line"></i>
-            Dashboard
-        </a>
-        <a href="calculator.html" class="nav-link">
-            <i class="fas fa-calculator"></i>
-            Calculadora
-        </a>
-        <a href="clientes.html" class="nav-link active">
+    <!-- Header - Atualizado com mais links como na página de Renovação -->
+    <div class="header">
+        <h1>
             <i class="fas fa-users"></i>
-            Clientes
-        </a>
-        <a href="investimentos.html" class="nav-link">
-            <i class="fas fa-chart-pie"></i>
-            Investimentos
-        </a>
-        <a href="products.html" class="nav-link">
-            <i class="fas fa-box"></i>
-            Produtos
-        </a>
+            Registro de Clientes IPTV
+        </h1>
+        
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-home"></i>
+                Início
+            </a>
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-chart-line"></i>
+                Dashboard
+            </a>
+            <a href="calculator.html" class="nav-link">
+                <i class="fas fa-calculator"></i>
+                Calculadora
+            </a>
+            <a href="clientes.html" class="nav-link active">
+                <i class="fas fa-user-plus"></i>
+                Registrar Cliente
+            </a>
+            <a href="clientesrenovacao.html" class="nav-link">
+                <i class="fas fa-redo-alt"></i>
+                Renovação
+            </a>
+            <a href="investimentos.html" class="nav-link">
+                <i class="fas fa-chart-pie"></i>
+                Investimentos
+            </a>
+            <a href="products.html" class="nav-link">
+                <i class="fas fa-box"></i>
+                Produtos
+            </a>
+        </div>
+        
+        <button class="menu-toggle" id="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
     </div>
     
-    <button class="menu-toggle" id="menu-toggle">
-        <i class="fas fa-bars"></i>
-    </button>
-</div>
+    <!-- Mobile Navigation - ATUALIZADO para ficar igual à página de Renovação -->
+    <div class="mobile-nav" id="mobile-nav">
+        <button class="mobile-nav-close" id="mobile-nav-close">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="mobile-nav-links">
+            <a href="index.html" class="mobile-nav-link">
+                <i class="fas fa-home"></i>
+                Início
+            </a>
+            <a href="dashboard.html" class="mobile-nav-link">
+                <i class="fas fa-chart-line"></i>
+                Dashboard
+            </a>
+            <a href="calculator.html" class="mobile-nav-link">
+                <i class="fas fa-calculator"></i>
+                Calculadora
+            </a>
+            <a href="clientes.html" class="mobile-nav-link active">
+                <i class="fas fa-user-plus"></i>
+                Registrar Cliente
+            </a>
+            <a href="clientesrenovacao.html" class="mobile-nav-link">
+                <i class="fas fa-redo-alt"></i>
+                Renovação
+            </a>
+            <a href="investimentos.html" class="mobile-nav-link">
+                <i class="fas fa-chart-pie"></i>
+                Investimentos
+            </a>
+            <a href="products.html" class="mobile-nav-link">
+                <i class="fas fa-box"></i>
+                Produtos
+            </a>
+        </div>
+    </div>
 
-<!-- Mobile Navigation -->
-<div class="mobile-nav" id="mobile-nav">
-    <div class="mobile-nav-links">
-        <a href="index.html" class="mobile-nav-link">
-            <i class="fas fa-home"></i>
-            Início
-        </a>
-        <a href="dashboard.html" class="mobile-nav-link">
-            <i class="fas fa-chart-line"></i>
-            Dashboard
-        </a>
-        <a href="calculator.html" class="mobile-nav-link">
-            <i class="fas fa-calculator"></i>
-            Calculadora
-        </a>
-        <a href="clientes.html" class="mobile-nav-link active">
-            <i class="fas fa-users"></i>
-            Clientes
-        </a>
-        <a href="investimentos.html" class="mobile-nav-link">
-            <i class="fas fa-chart-pie"></i>
-            Investimentos
-        </a>
-        <a href="products.html" class="mobile-nav-link">
-            <i class="fas fa-box"></i>
-            Produtos
-        </a>
-    </div>
-</div>
     <!-- Container do Formulário -->
     <div class="container">
         <div class="form-container">
@@ -596,11 +743,16 @@
                                 <i class="fas fa-calendar input-icon"></i>
                                 <select id="tipoPlano" required>
                                     <option value="">Selecione...</option>
-                                    <option value="1_mes">Plano de 1 Mês</option>
-                                    <option value="2_mes">Plano de 2 Meses</option>
-                                    <option value="3_mes">Plano de 3 Meses</option>
-                                    <option value="6_mes">Plano de 6 Meses</option>
-                                    <option value="1_ano">Plano de 1 Ano</option>
+                                    <option value="1_mes_sem_adultos">Plano de 1 Mês (Sem Adultos)</option>
+                                    <option value="1_mes_com_adultos">Plano de 1 Mês (Com Adultos)</option>
+                                    <option value="2_mes_sem_adultos">Plano de 2 Meses (Sem Adultos)</option>
+                                    <option value="2_mes_com_adultos">Plano de 2 Meses (Com Adultos)</option>
+                                    <option value="3_mes_sem_adultos">Plano de 3 Meses (Sem Adultos)</option>
+                                    <option value="3_mes_com_adultos">Plano de 3 Meses (Com Adultos)</option>
+                                    <option value="6_mes_sem_adultos">Plano de 6 Meses (Sem Adultos)</option>
+                                    <option value="6_mes_com_adultos">Plano de 6 Meses (Com Adultos)</option>
+                                    <option value="1_ano_sem_adultos">Plano de 1 Ano (Sem Adultos)</option>
+                                    <option value="1_ano_com_adultos">Plano de 1 Ano (Com Adultos)</option>
                                 </select>
                             </div>
                             <div class="error-message" id="tipoPlanoError">
@@ -735,6 +887,33 @@
         </div>
     </div>
 
+    <!-- Modal de Boas-Vindas -->
+    <div id="welcomeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-check-circle"></i>
+                    Cliente Cadastrado com Sucesso!
+                </h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Mensagem de boas-vindas para o cliente:</p>
+                <div class="modal-message" id="welcomeMessage"></div>
+                <p><small>Esta mensagem será enviada via WhatsApp para o cliente.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button id="sendWhatsApp" class="btn btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i>
+                    Enviar via WhatsApp
+                </button>
+                <button id="closeModal" class="btn btn-secondary">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuração do Backend
         const BACKEND_URL = 'https://backend-calculador.onrender.com';
@@ -742,13 +921,26 @@
         
         // Variáveis de estado
         let dadosCliente = null;
+        let mensagemBoasVindas = '';
 
-        // Menu mobile toggle
+        // Menu mobile toggle - ATUALIZADO com o botão de fechar
         const menuToggle = document.getElementById('menu-toggle');
         const mobileNav = document.getElementById('mobile-nav');
+        const mobileNavClose = document.getElementById('mobile-nav-close');
         
         menuToggle.addEventListener('click', () => {
             mobileNav.classList.toggle('active');
+        });
+        
+        mobileNavClose.addEventListener('click', () => {
+            mobileNav.classList.remove('active');
+        });
+        
+        // Fechar menu mobile ao clicar em um link
+        document.querySelectorAll('.mobile-nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileNav.classList.remove('active');
+            });
         });
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -764,6 +956,13 @@
             const tipoPlanoSelect = document.getElementById('tipoPlano');
             const dataVencimentoInput = document.getElementById('dataVencimento');
             const telefoneInput = document.getElementById('telefoneCliente');
+            
+            // Elementos do modal
+            const modal = document.getElementById('welcomeModal');
+            const closeModalBtn = document.querySelector('.close-modal');
+            const closeModalBtnFooter = document.getElementById('closeModal');
+            const sendWhatsAppBtn = document.getElementById('sendWhatsApp');
+            const welcomeMessageEl = document.getElementById('welcomeMessage');
 
             // Definir data mínima para hoje
             const hoje = new Date().toISOString().split('T')[0];
@@ -808,11 +1007,16 @@
             
             function obterNomePlano(valor) {
                 const planos = {
-                    '1_mes': 'Plano de 1 Mês',
-                    '2_mes': 'Plano de 2 Meses',
-                    '3_mes': 'Plano de 3 Meses',
-                    '6_mes': 'Plano de 6 Meses',
-                    '1_ano': 'Plano de 1 Ano'
+                    '1_mes_sem_adultos': 'Plano de 1 Mês (Sem Adultos)',
+                    '1_mes_com_adultos': 'Plano de 1 Mês (Com Adultos)',
+                    '2_mes_sem_adultos': 'Plano de 2 Meses (Sem Adultos)',
+                    '2_mes_com_adultos': 'Plano de 2 Meses (Com Adultos)',
+                    '3_mes_sem_adultos': 'Plano de 3 Meses (Sem Adultos)',
+                    '3_mes_com_adultos': 'Plano de 3 Meses (Com Adultos)',
+                    '6_mes_sem_adultos': 'Plano de 6 Meses (Sem Adultos)',
+                    '6_mes_com_adultos': 'Plano de 6 Meses (Com Adultos)',
+                    '1_ano_sem_adultos': 'Plano de 1 Ano (Sem Adultos)',
+                    '1_ano_com_adultos': 'Plano de 1 Ano (Com Adultos)'
                 };
                 return planos[valor] || valor;
             }
@@ -899,6 +1103,38 @@
                 
                 return valido;
             }
+            
+            function gerarMensagemBoasVindas(cliente) {
+                const dataVencimentoFormatada = formatarData(cliente.data_vencimento);
+                const valorFormatado = cliente.valor_plano.toFixed(2).replace('.', ',');
+                
+                return `Olá ${cliente.nome}, seja bem-vindo(a)!
+
+Seu plano de IPTV foi ativado com sucesso!
+
+📺 *Plano:* ${cliente.tipo_plano_texto}
+💰 *Valor:* R$ ${valorFormatado}
+📅 *Data de Vencimento:* ${dataVencimentoFormatada}
+
+Agradecemos pela preferência!
+Qualquer dúvida, estamos à disposição.`;
+            }
+            
+            function mostrarModal(cliente) {
+                mensagemBoasVindas = gerarMensagemBoasVindas(cliente);
+                welcomeMessageEl.textContent = mensagemBoasVindas;
+                modal.classList.add('active');
+            }
+            
+            function enviarWhatsApp() {
+                if (!dadosCliente) return;
+                
+                const numeroTelefone = dadosCliente.telefone.replace(/\D/g, '');
+                const mensagemCodificada = encodeURIComponent(mensagemBoasVindas);
+                const urlWhatsApp = `https://wa.me/55${numeroTelefone}?text=${mensagemCodificada}`;
+                
+                window.open(urlWhatsApp, '_blank');
+            }
 
             // --- Event Listeners ---
             
@@ -966,6 +1202,7 @@
                     valor_plano: valorPlano,
                     tipo: tipoCliente,
                     tipo_plano: tipoPlano,
+                    tipo_plano_texto: obterNomePlano(tipoPlano),
                     data_vencimento: dataVencimento,
                     revendedor: tipoCliente === 'revenda' ? revendedorNome : null,
                     servidor: servidorNomes[servidor],
@@ -1031,11 +1268,8 @@
 
                     mostrarAlerta(`Cliente "${dadosCliente.nome}" salvo com sucesso!`, 'success');
                     
-                    // Resetar formulário
-                    form.reset();
-                    previaDetalhes.innerHTML = '<p>Preencha o formulário para visualizar a prévia</p>';
-                    dadosCliente = null;
-                    revendedorSection.style.display = 'none';
+                    // Mostrar modal de boas-vindas
+                    mostrarModal(dadosCliente);
                     
                 } catch (error) {
                     console.error('Erro ao salvar cliente:', error);
@@ -1057,9 +1291,42 @@
                 revendedorSection.style.display = 'none';
                 alertDiv.style.display = 'none';
             });
+            
+            // Modal event listeners
+            closeModalBtn.addEventListener('click', function() {
+                modal.classList.remove('active');
+                // Resetar formulário após fechar modal
+                form.reset();
+                dadosCliente = null;
+                previaDetalhes.innerHTML = '<p>Preencha o formulário para visualizar a prévia</p>';
+                revendedorSection.style.display = 'none';
+            });
+            
+            closeModalBtnFooter.addEventListener('click', function() {
+                modal.classList.remove('active');
+                // Resetar formulário após fechar modal
+                form.reset();
+                dadosCliente = null;
+                previaDetalhes.innerHTML = '<p>Preencha o formulário para visualizar a prévia</p>';
+                revendedorSection.style.display = 'none';
+            });
+            
+            sendWhatsAppBtn.addEventListener('click', function() {
+                enviarWhatsApp();
+            });
+            
+            // Fechar modal ao clicar fora
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.classList.remove('active');
+                    // Resetar formulário após fechar modal
+                    form.reset();
+                    dadosCliente = null;
+                    previaDetalhes.innerHTML = '<p>Preencha o formulário para visualizar a prévia</p>';
+                    revendedorSection.style.display = 'none';
+                }
+            });
         });
     </script>
 </body>
-
 </html>
-
