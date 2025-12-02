@@ -363,6 +363,15 @@
             background-color: #128C7E;
         }
         
+        .btn-secondary {
+            background-color: var(--gray-medium);
+            color: var(--text-dark);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #d1d9e8;
+        }
+        
         .acoes-cell {
             display: flex;
             gap: 8px;
@@ -549,6 +558,12 @@
             background-color: #f0fff4;
             color: var(--success-color);
             border: 1px solid #c6f6d5;
+        }
+        
+        .alert-warning {
+            background-color: #fffaf0;
+            color: var(--warning-color);
+            border: 1px solid #feebc8;
         }
         
         /* Novo estilo para o modal do WhatsApp */
@@ -1127,19 +1142,8 @@
                     <!-- A mensagem será inserida aqui via JavaScript -->
                 </div>
                 
-                <div class="renovacao-info">
-                    <div class="info-item">
-                        <span class="info-label">Cliente:</span>
-                        <span class="info-value" id="confirmacaoClienteNome">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Plano:</span>
-                        <span class="info-value" id="confirmacaoPlano">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Novo Vencimento:</span>
-                        <span class="info-value" id="confirmacaoVencimento">-</span>
-                    </div>
+                <div class="renovacao-info" id="confirmacaoInfo">
+                    <!-- As informações serão inseridas aqui via JavaScript -->
                 </div>
             </div>
             <div class="modal-footer">
@@ -1207,16 +1211,16 @@
         
         function obterNomePlano(valor) {
             const planos = {
-                '1_mes_sem_adultos': 'Plano de 1 Mês (Sem Adultos)',
-                '1_mes_com_adultos': 'Plano de 1 Mês (Com Adultos)',
-                '2_mes_sem_adultos': 'Plano de 2 Meses (Sem Adultos)',
-                '2_mes_com_adultos': 'Plano de 2 Meses (Com Adultos)',
-                '3_mes_sem_adultos': 'Plano de 3 Meses (Sem Adultos)',
-                '3_mes_com_adultos': 'Plano de 3 Meses (Com Adultos)',
-                '6_mes_sem_adultos': 'Plano de 6 Meses (Sem Adultos)',
-                '6_mes_com_adultos': 'Plano de 6 Meses (Com Adultos)',
-                '1_ano_sem_adultos': 'Plano de 1 Ano (Sem Adultos)',
-                '1_ano_com_adultos': 'Plano de 1 Ano (Com Adultos)'
+                '1_mes_sem_adultos': '1 Mês (Sem Adultos)',
+                '1_mes_com_adultos': '1 Mês (Com Adultos)',
+                '2_mes_sem_adultos': '2 Meses (Sem Adultos)',
+                '2_mes_com_adultos': '2 Meses (Com Adultos)',
+                '3_mes_sem_adultos': '3 Meses (Sem Adultos)',
+                '3_mes_com_adultos': '3 Meses (Com Adultos)',
+                '6_mes_sem_adultos': '6 Meses (Sem Adultos)',
+                '6_mes_com_adultos': '6 Meses (Com Adultos)',
+                '1_ano_sem_adultos': '1 Ano (Sem Adultos)',
+                '1_ano_com_adultos': '1 Ano (Com Adultos)'
             };
             return planos[valor] || valor;
         }
@@ -1305,9 +1309,10 @@ Jeferson`;
             return mensagem;
         }
         
-        // Função para gerar mensagem de confirmação de renovação - SEM EMOJIS
-        function gerarMensagemConfirmacao(cliente, plano, dataVencimento) {
+        // Função para gerar mensagem de confirmação de renovação - COM VALOR
+        function gerarMensagemConfirmacao(cliente, plano, dataVencimento, valor) {
             const nomePlano = obterNomePlano(plano);
+            const dataHora = new Date().toLocaleString('pt-BR');
             
             let mensagem = `RENOVAÇÃO CONFIRMADA! SEU ACESSO AO IPTV ESTÁ ATIVO
 
@@ -1315,10 +1320,13 @@ Olá, ${cliente.nome}!
 
 Temos o prazer de informar que a sua renovação do nosso serviço de IPTV foi confirmada com sucesso. Agora, você pode continuar desfrutando de todos os seus canais e conteúdos favoritos sem interrupções!
 
-Detalhes da Renovação:
+DETALHES DA RENOVAÇÃO:
 
-Plano Escolhido: ${nomePlano}
-Data de Expiração: ${dataVencimento}
+• Cliente: ${cliente.nome}
+• Plano Escolhido: ${nomePlano}
+• Valor: R$ ${valor.toFixed(2)}
+• Data de Expiração: ${dataVencimento}
+• Data e Hora da Renovação: ${dataHora}
 
 Agradecemos por continuar conosco! Estamos felizes em oferecer a você o melhor do entretenimento com nosso serviço de IPTV.
 
@@ -1348,6 +1356,101 @@ Jeferson`;
             window.open(urlWhatsApp, '_blank');
         }
         
+        // Função para registrar renovação no histórico
+        async function registrarRenovacao(cliente, planoNovo, valorRenovacao, novaDataVencimento) {
+            try {
+                // Verificar se o servidor está disponível
+                try {
+                    const healthCheck = await fetch('/api/wake-up');
+                    if (!healthCheck.ok) {
+                        console.warn('Servidor não disponível, usando Supabase direto');
+                        return await registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento);
+                    }
+                } catch (e) {
+                    console.warn('Servidor não disponível, usando Supabase direto');
+                    return await registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento);
+                }
+
+                const dadosRenovacao = {
+                    cliente_id: cliente.id,
+                    cliente_nome: cliente.nome,
+                    cliente_telefone: cliente.telefone,
+                    tipo_cliente: cliente.tipo,
+                    plano_anterior: cliente.tipo_plano,
+                    plano_novo: planoNovo,
+                    valor_renovacao: valorRenovacao,
+                    data_vencimento_anterior: cliente.data_vencimento,
+                    data_vencimento_novo: novaDataVencimento,
+                    revendedor: cliente.revendedor,
+                    servidor: cliente.servidor
+                };
+
+                // Usar o endpoint do servidor Express
+                const response = await fetch('/api/renovacoes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dadosRenovacao)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro ao registrar renovação: ${response.status}`);
+                }
+
+                const resultado = await response.json();
+                console.log('Renovação registrada com sucesso no histórico:', resultado);
+                return resultado;
+            } catch (error) {
+                console.error('Erro ao registrar renovação no histórico via servidor:', error);
+                // Tentar método alternativo
+                return await registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento);
+            }
+        }
+
+        // Método alternativo: registrar direto no Supabase se o servidor falhar
+        async function registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento) {
+            try {
+                const dadosRenovacao = {
+                    cliente_id: cliente.id,
+                    cliente_nome: cliente.nome,
+                    cliente_telefone: cliente.telefone,
+                    tipo_cliente: cliente.tipo,
+                    plano_anterior: cliente.tipo_plano,
+                    plano_novo: planoNovo,
+                    valor_renovacao: valorRenovacao,
+                    data_vencimento_anterior: cliente.data_vencimento,
+                    data_vencimento_novo: novaDataVencimento,
+                    revendedor: cliente.revendedor,
+                    servidor: cliente.servidor,
+                    data_renovacao: new Date().toISOString()
+                };
+
+                const response = await fetch(`${supabaseUrl}/rest/v1/renovacoes_iptv`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(dadosRenovacao)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro ao registrar renovação direto: ${response.status}`);
+                }
+
+                const resultado = await response.json();
+                console.log('Renovação registrada diretamente no Supabase:', resultado);
+                return resultado[0];
+            } catch (error) {
+                console.error('Erro ao registrar renovação diretamente:', error);
+                // Mesmo se falhar, continuamos o processo
+                return null;
+            }
+        }
+        
         // Abrir modal de visualização da mensagem do WhatsApp
         function abrirModalWhatsApp(clienteId) {
             clienteWhatsApp = clientes.find(c => c.id == clienteId);
@@ -1375,18 +1478,39 @@ Jeferson`;
             clienteWhatsApp = null;
         }
         
-        // Abrir modal de confirmação de renovação
-        function abrirModalConfirmacao(cliente, plano, dataVencimento) {
+        // Abrir modal de confirmação de renovação - ATUALIZADA
+        function abrirModalConfirmacao(cliente, plano, dataVencimento, valor) {
             // Salvar o cliente renovado
             clienteRenovado = cliente;
             
             // Preencher informações do modal
-            document.getElementById('confirmacaoClienteNome').textContent = cliente.nome || 'N/A';
-            document.getElementById('confirmacaoPlano').textContent = obterNomePlano(plano);
-            document.getElementById('confirmacaoVencimento').textContent = formatarData(dataVencimento);
+            const infoDiv = document.getElementById('confirmacaoInfo');
+            infoDiv.innerHTML = ''; // Limpar conteúdo anterior
+            
+            const dataHora = new Date().toLocaleString('pt-BR');
+            
+            const itensInfo = [
+                { label: 'Cliente:', value: cliente.nome || 'N/A' },
+                { label: 'Telefone:', value: cliente.telefone || 'N/A' },
+                { label: 'Tipo:', value: cliente.tipo === 'direto' ? 'Direto' : 'Revenda' },
+                { label: 'Plano:', value: obterNomePlano(plano) },
+                { label: 'Valor:', value: `R$ ${valor.toFixed(2)}` },
+                { label: 'Novo Vencimento:', value: formatarData(dataVencimento) },
+                { label: 'Data e Hora:', value: dataHora }
+            ];
+            
+            itensInfo.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'info-item';
+                div.innerHTML = `
+                    <span class="info-label">${item.label}</span>
+                    <span class="info-value">${item.value}</span>
+                `;
+                infoDiv.appendChild(div);
+            });
             
             // Gerar e exibir a mensagem
-            const mensagem = gerarMensagemConfirmacao(cliente, plano, formatarData(dataVencimento));
+            const mensagem = gerarMensagemConfirmacao(cliente, plano, formatarData(dataVencimento), valor);
             document.getElementById('mensagemConfirmacao').textContent = mensagem;
             
             // Abrir modal
@@ -1587,7 +1711,7 @@ Jeferson`;
             return novaData.toISOString().split('T')[0];
         }
         
-        // Confirmar renovação
+        // Confirmar renovação - ATUALIZADA
         async function confirmarRenovacao() {
             const planoSelecionado = document.querySelector('.plano-option.selected');
             
@@ -1601,7 +1725,15 @@ Jeferson`;
             const novaDataVencimento = calcularNovoVencimento(tipoPlano);
             
             try {
-                // Atualizar no Supabase
+                // 1. Registrar renovação no histórico (ANTES de atualizar o cliente)
+                const registroRenovacao = await registrarRenovacao(
+                    clienteAtual,
+                    tipoPlano,
+                    valorPlano,
+                    novaDataVencimento
+                );
+                
+                // 2. Atualizar o cliente no Supabase
                 const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteAtual.id}`, {
                     method: 'PATCH',
                     headers: {
@@ -1613,7 +1745,8 @@ Jeferson`;
                     body: JSON.stringify({
                         tipo_plano: tipoPlano,
                         valor_plano: valorPlano,
-                        data_vencimento: novaDataVencimento
+                        data_vencimento: novaDataVencimento,
+                        ultima_renovacao: new Date().toISOString()
                     })
                 });
                 
@@ -1621,25 +1754,29 @@ Jeferson`;
                     throw new Error(`Erro ao atualizar cliente: ${response.status}`);
                 }
                 
-                // Atualizar localmente
+                // 3. Atualizar localmente
                 const clienteIndex = clientes.findIndex(c => c.id === clienteAtual.id);
                 if (clienteIndex !== -1) {
                     clientes[clienteIndex].tipo_plano = tipoPlano;
                     clientes[clienteIndex].valor_plano = valorPlano;
                     clientes[clienteIndex].data_vencimento = novaDataVencimento;
+                    clientes[clienteIndex].ultima_renovacao = new Date().toISOString();
                 }
                 
-                // SALVAR O CLIENTE ANTES DE FECHAR O MODAL
+                // 4. SALVAR O CLIENTE ANTES DE FECHAR O MODAL
                 const clienteRenovacao = {...clienteAtual};
                 
-                // Fechar modal de renovação
+                // 5. Fechar modal de renovação
                 fecharModalRenovacao();
                 
-                // Abrir modal de confirmação
-                abrirModalConfirmacao(clienteRenovacao, tipoPlano, novaDataVencimento);
+                // 6. Abrir modal de confirmação com informações da renovação
+                abrirModalConfirmacao(clienteRenovacao, tipoPlano, novaDataVencimento, valorPlano);
                 
-                // Atualizar a tabela
+                // 7. Atualizar a tabela
                 renderizarClientes(clientes);
+                
+                // 8. Mostrar mensagem de sucesso
+                mostrarAlerta(`Renovação realizada com sucesso para ${clienteAtual.nome}!`, 'success');
                 
             } catch (error) {
                 console.error('Erro ao renovar plano:', error);
