@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
+     :root {
             --primary-color: #5d78ff;
             --secondary-color: #8a9bff;
             --accent-color: #ff6b8b;
@@ -318,6 +318,12 @@
             gap: 8px;
         }
         
+        /* Gráfico Full Width */
+        .chart-full-width {
+            grid-column: 1 / -1;
+            height: 450px;
+        }
+        
         /* Layout de Tabelas */
         .table-grid {
             display: grid;
@@ -539,6 +545,10 @@
                 padding: 15px;
             }
             
+            .chart-full-width {
+                height: 350px;
+            }
+            
             .table-container {
                 padding: 15px;
             }
@@ -594,6 +604,36 @@
             width: 12px;
             height: 12px;
             border-radius: 3px;
+        }
+        
+        /* Estilo para estatísticas diárias */
+        .daily-stats {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .daily-stat-item {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .daily-stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .daily-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -836,6 +876,64 @@
                 </div>
                 <canvas id="planTypeChart"></canvas>
                 <div class="chart-legend" id="planLegend"></div>
+            </div>
+        </div>
+        
+        <!-- NOVO: Gráfico de Receita Diária EXATA -->
+        <div class="chart-grid">
+            <div class="chart-container chart-full-width">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="fas fa-calendar-day"></i>
+                        Receita por Dia - Mês Atual (EXATA)
+                    </h3>
+                    <div>
+                        <span id="dailyRevenueMonth"></span>
+                    </div>
+                </div>
+                <canvas id="dailyRevenueChart"></canvas>
+                
+                <!-- Estatísticas Diárias EXATAS -->
+                <div class="daily-stats">
+                    <div class="daily-stat-item">
+                        <div class="daily-stat-value" id="totalMonthRevenue">R$ 0,00</div>
+                        <div class="daily-stat-label">Total do Mês</div>
+                    </div>
+                    <div class="daily-stat-item">
+                        <div class="daily-stat-value" id="maxDayRevenue">R$ 0,00</div>
+                        <div class="daily-stat-label">Maior Receita (Dia)</div>
+                    </div>
+                    <div class="daily-stat-item">
+                        <div class="daily-stat-value" id="daysWithRevenue">0</div>
+                        <div class="daily-stat-label">Dias com Receita</div>
+                    </div>
+                    <div class="daily-stat-item">
+                        <div class="daily-stat-value" id="totalClientsMonth">0</div>
+                        <div class="daily-stat-label">Clientes no Mês</div>
+                    </div>
+                </div>
+                
+                <!-- Tabela de Receita por Dia -->
+                <div style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 10px; color: var(--dark-color);">
+                        <i class="fas fa-table"></i> Detalhamento por Dia
+                    </h4>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--gray-medium); border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: var(--light-color);">
+                                    <th style="padding: 10px; text-align: left; font-size: 0.85rem;">Dia</th>
+                                    <th style="padding: 10px; text-align: right; font-size: 0.85rem;">Receita</th>
+                                    <th style="padding: 10px; text-align: right; font-size: 0.85rem;">Clientes</th>
+                                    <th style="padding: 10px; text-align: center; font-size: 0.85rem;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyRevenueDetails">
+                                <!-- Os dados serão inseridos aqui via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1102,6 +1200,342 @@
             setTimeout(() => {
                 alertDiv.style.display = 'none';
             }, 5000);
+        }
+        
+        // NOVA FUNÇÃO: Calcular receita EXATA por dia baseada nos vencimentos
+        function calcularReceitaDiariaExata(clientes) {
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            
+            // Obter número de dias no mês atual
+            const ultimoDiaMes = new Date(anoAtual, mesAtual + 1, 0);
+            const diasNoMes = ultimoDiaMes.getDate();
+            
+            // Inicializar arrays para cada dia do mês
+            const receitaPorDia = new Array(diasNoMes).fill(0);
+            const clientesPorDia = new Array(diasNoMes).fill(0);
+            const detalhesPorDia = new Array(diasNoMes).fill([]);
+            
+            // Nome dos meses para exibição
+            const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            
+            // Processar cada cliente
+            clientes.forEach(cliente => {
+                const dataVencimento = new Date(cliente.data_vencimento);
+                const valorPlano = obterValorPlano(cliente.valor_plano);
+                const mesVencimento = dataVencimento.getMonth();
+                const anoVencimento = dataVencimento.getFullYear();
+                
+                // Verificar se o vencimento é no mês atual
+                if (mesVencimento === mesAtual && anoVencimento === anoAtual) {
+                    const diaVencimento = dataVencimento.getDate() - 1; // Índice base 0
+                    
+                    // Adicionar valor do plano ao dia de vencimento
+                    if (diaVencimento >= 0 && diaVencimento < diasNoMes) {
+                        receitaPorDia[diaVencimento] += valorPlano;
+                        clientesPorDia[diaVencimento]++;
+                        
+                        // Adicionar detalhes do cliente
+                        if (!detalhesPorDia[diaVencimento]) {
+                            detalhesPorDia[diaVencimento] = [];
+                        }
+                        detalhesPorDia[diaVencimento].push({
+                            nome: cliente.nome || 'N/A',
+                            valor: valorPlano,
+                            telefone: cliente.telefone || 'N/A',
+                            plano: obterNomePlano(cliente.tipo_plano)
+                        });
+                    }
+                }
+            });
+            
+            // Calcular estatísticas EXATAS
+            let totalReceitaMes = 0;
+            let maxReceita = 0;
+            let diaMaxReceita = 0;
+            let diasComReceita = 0;
+            let totalClientesMes = 0;
+            
+            receitaPorDia.forEach((receita, index) => {
+                totalReceitaMes += receita;
+                if (receita > 0) {
+                    diasComReceita++;
+                    totalClientesMes += clientesPorDia[index];
+                }
+                if (receita > maxReceita) {
+                    maxReceita = receita;
+                    diaMaxReceita = index + 1;
+                }
+            });
+            
+            // Formatar estatísticas para exibição
+            const estatisticas = {
+                receitaPorDia: receitaPorDia,
+                clientesPorDia: clientesPorDia,
+                detalhesPorDia: detalhesPorDia,
+                totalMensal: totalReceitaMes,
+                diasNoMes: diasNoMes,
+                diasComReceita: diasComReceita,
+                totalClientesMes: totalClientesMes,
+                maxReceita: maxReceita,
+                diaMaxReceita: diaMaxReceita,
+                mesAtualNome: meses[mesAtual],
+                anoAtual: anoAtual
+            };
+            
+            return estatisticas;
+        }
+        
+        // NOVA FUNÇÃO: Criar gráfico de receita diária EXATA
+        function criarGraficoReceitaDiariaExata() {
+            const ctx = document.getElementById('dailyRevenueChart').getContext('2d');
+            const estatisticas = calcularReceitaDiariaExata(clientes);
+            
+            // Gerar labels dos dias do mês
+            const diasLabels = [];
+            for (let i = 1; i <= estatisticas.diasNoMes; i++) {
+                diasLabels.push(i.toString());
+            }
+            
+            // Destacar dias: hoje, fins de semana e dias com receita
+            const hoje = new Date();
+            const diaAtual = hoje.getDate();
+            
+            const coresBarras = diasLabels.map((_, index) => {
+                const dia = index + 1;
+                const receita = estatisticas.receitaPorDia[index];
+                
+                // Dia atual
+                if (dia === diaAtual) {
+                    return receita > 0 ? '#ff6b8b' : '#ffb6c1'; // Rosa forte se tiver receita, rosa claro se não
+                }
+                
+                // Fim de semana
+                const dataDia = new Date(hoje.getFullYear(), hoje.getMonth(), dia);
+                if (dataDia.getDay() === 0 || dataDia.getDay() === 6) {
+                    return receita > 0 ? '#8a9bff' : '#c8d1ff'; // Azul forte se tiver receita, azul claro se não
+                }
+                
+                // Dia normal com receita
+                if (receita > 0) {
+                    return '#5d78ff'; // Azul padrão
+                }
+                
+                // Dia normal sem receita
+                return '#e2e8f0'; // Cinza claro
+            });
+            
+            // Destacar bordas dos dias com receita
+            const bordasBarras = diasLabels.map((_, index) => {
+                const receita = estatisticas.receitaPorDia[index];
+                return receita > 0 ? '#2d3748' : 'transparent';
+            });
+            
+            if (charts.dailyRevenueChart) {
+                charts.dailyRevenueChart.destroy();
+            }
+            
+            charts.dailyRevenueChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: diasLabels,
+                    datasets: [{
+                        label: 'Receita do Dia (R$)',
+                        data: estatisticas.receitaPorDia,
+                        backgroundColor: coresBarras,
+                        borderColor: bordasBarras,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Clientes que Vencem',
+                        data: estatisticas.clientesPorDia,
+                        type: 'line',
+                        borderColor: '#ff9800',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#ff9800',
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.label === 'Receita do Dia (R$)') {
+                                        return `Receita: ${formatarMoeda(context.raw)}`;
+                                    } else {
+                                        return `Clientes: ${context.raw}`;
+                                    }
+                                },
+                                afterLabel: function(context) {
+                                    const diaIndex = context.dataIndex;
+                                    const detalhes = estatisticas.detalhesPorDia[diaIndex];
+                                    
+                                    if (detalhes && detalhes.length > 0) {
+                                        let tooltipText = '\n\nClientes:\n';
+                                        detalhes.forEach((cliente, index) => {
+                                            if (index < 3) { // Mostrar apenas 3 clientes no tooltip
+                                                tooltipText += `• ${cliente.nome}: ${formatarMoeda(cliente.valor)}\n`;
+                                            }
+                                        });
+                                        
+                                        if (detalhes.length > 3) {
+                                            tooltipText += `... e mais ${detalhes.length - 3} cliente(s)`;
+                                        }
+                                        
+                                        return tooltipText;
+                                    }
+                                    
+                                    return '\n\nNenhum cliente vence hoje';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Dia do Mês'
+                            },
+                            grid: {
+                                display: true
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Receita (R$)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatarMoeda(value).replace('R$', '');
+                                }
+                            },
+                            grid: {
+                                color: function(context) {
+                                    return context.tick.value === 0 ? '#2d3748' : '#e2e8f0';
+                                }
+                            }
+                        },
+                        y1: {
+                            position: 'right',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Clientes'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Atualizar estatísticas EXATAS
+            document.getElementById('totalMonthRevenue').textContent = formatarMoeda(estatisticas.totalMensal);
+            document.getElementById('maxDayRevenue').textContent = `${formatarMoeda(estatisticas.maxReceita)} (Dia ${estatisticas.diaMaxReceita})`;
+            document.getElementById('daysWithRevenue').textContent = `${estatisticas.diasComReceita} dias`;
+            document.getElementById('totalClientsMonth').textContent = `${estatisticas.totalClientesMes} clientes`;
+            
+            // Atualizar mês atual no título
+            document.getElementById('dailyRevenueMonth').textContent = 
+                `${estatisticas.mesAtualNome} ${estatisticas.anoAtual}`;
+            
+            // Atualizar tabela de detalhamento por dia
+            atualizarTabelaDetalhesDiarios(estatisticas);
+        }
+        
+        // NOVA FUNÇÃO: Atualizar tabela de detalhes diários
+        function atualizarTabelaDetalhesDiarios(estatisticas) {
+            const tbody = document.getElementById('dailyRevenueDetails');
+            tbody.innerHTML = '';
+            
+            // Ordenar dias por receita (do maior para o menor)
+            const diasOrdenados = [];
+            for (let i = 0; i < estatisticas.diasNoMes; i++) {
+                diasOrdenados.push({
+                    dia: i + 1,
+                    receita: estatisticas.receitaPorDia[i],
+                    clientes: estatisticas.clientesPorDia[i],
+                    detalhes: estatisticas.detalhesPorDia[i] || []
+                });
+            }
+            
+            diasOrdenados.sort((a, b) => b.receita - a.receita);
+            
+            // Adicionar apenas dias com receita à tabela
+            diasOrdenados.forEach(item => {
+                if (item.receita > 0) {
+                    const hoje = new Date();
+                    const diaAtual = hoje.getDate();
+                    const status = item.dia === diaAtual ? 'Hoje' : 
+                                  item.dia < diaAtual ? 'Passado' : 'Futuro';
+                    
+                    let statusClass = '';
+                    let statusIcon = '';
+                    
+                    switch(status) {
+                        case 'Hoje':
+                            statusClass = 'status-ativo';
+                            statusIcon = '<i class="fas fa-circle" style="color: #ff6b8b; font-size: 0.8rem;"></i>';
+                            break;
+                        case 'Passado':
+                            statusClass = 'status-expirado';
+                            statusIcon = '<i class="fas fa-check-circle" style="color: #4caf50; font-size: 0.8rem;"></i>';
+                            break;
+                        case 'Futuro':
+                            statusClass = 'status-pendente';
+                            statusIcon = '<i class="fas fa-clock" style="color: #ff9800; font-size: 0.8rem;"></i>';
+                            break;
+                    }
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="padding: 8px 10px; border-bottom: 1px solid var(--gray-medium);">
+                            <strong>${item.dia}</strong>
+                        </td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid var(--gray-medium); text-align: right; font-weight: 600;">
+                            ${formatarMoeda(item.receita)}
+                        </td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid var(--gray-medium); text-align: right;">
+                            ${item.clientes} cliente(s)
+                        </td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid var(--gray-medium); text-align: center;">
+                            ${statusIcon} <span style="font-size: 0.8rem;">${status}</span>
+                        </td>
+                    `;
+                    
+                    // Adicionar tooltip com detalhes dos clientes
+                    row.title = `Clientes que vencem no dia ${item.dia}:\n` +
+                               item.detalhes.map(c => `${c.nome}: ${formatarMoeda(c.valor)}`).join('\n');
+                    
+                    tbody.appendChild(row);
+                }
+            });
+            
+            // Se não houver dias com receita, mostrar mensagem
+            if (tbody.children.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="padding: 20px; text-align: center; color: var(--text-light);">
+                            <i class="fas fa-calendar-times" style="font-size: 1.5rem; margin-bottom: 10px; display: block;"></i>
+                            Nenhuma receita programada para este mês
+                        </td>
+                    </tr>
+                `;
+            }
         }
         
         // Função para processar dados do dashboard
@@ -1595,6 +2029,7 @@
                     statusHTML = '<span class="status-indicator status-expirado"></span>Expirado';
                 }
                 
+                const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${cliente.nome || 'N/A'}</td>
                     <td>${obterNomePlano(cliente.tipo_plano)}</td>
@@ -1805,6 +2240,10 @@
                 criarGraficoReceitaMensal(dashboardData);
                 criarGraficoRenovacoes(dashboardData);
                 criarGraficoTiposPlano(dashboardData);
+                
+                // NOVO: Criar gráfico de receita diária EXATA
+                criarGraficoReceitaDiariaExata();
+                
                 atualizarTabelaRevendedores(dashboardData);
                 atualizarTabelaClientesAntigos(dashboardData);
                 atualizarTabelaPlanosMaiores(dashboardData);
