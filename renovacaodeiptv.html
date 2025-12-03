@@ -1157,119 +1157,122 @@
     </div>
 
     <script>
-        // Configuração do Supabase
-        const supabaseUrl = 'https://pcbtgvdcihowmtmqzhns.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYnRndmRjaWhvd210bXF6aG5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIyODk1OSwiZXhwIjoyMDc4ODA0OTU5fQ.2F5YFviXUv5LeQmNKvPgiVAHmeioJ_3ro9K8enZxVsM';
-        
-        // Variáveis globais
-        let clientes = [];
-        let clienteAtual = null;
-        let clienteWhatsApp = null;
-        let clienteRenovado = null;
-        
-        // Menu mobile toggle
-        const menuToggle = document.getElementById('menu-toggle');
-        const mobileNav = document.getElementById('mobile-nav');
-        const mobileNavClose = document.getElementById('mobile-nav-close');
-        
-        menuToggle.addEventListener('click', () => {
-            mobileNav.classList.toggle('active');
-        });
-        
-        mobileNavClose.addEventListener('click', () => {
+    // Configuração do Supabase
+    const supabaseUrl = 'https://pcbtgvdcihowmtmqzhns.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYnRndmRjaWhvd210bXF6aG5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIyODk1OSwiZXhwIjoyMDc4ODA0OTU5fQ.2F5YFviXUv5LeQmNKvPgiVAHmeioJ_3ro9K8enZxVsM';
+    
+    // Variáveis globais
+    let clientes = [];
+    let clienteAtual = null;
+    let clienteWhatsApp = null;
+    let clienteRenovado = null;
+    
+    // Menu mobile toggle
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileNav = document.getElementById('mobile-nav');
+    const mobileNavClose = document.getElementById('mobile-nav-close');
+    
+    menuToggle.addEventListener('click', () => {
+        mobileNav.classList.toggle('active');
+    });
+    
+    mobileNavClose.addEventListener('click', () => {
+        mobileNav.classList.remove('active');
+    });
+    
+    // Fechar menu mobile ao clicar em um link
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+        link.addEventListener('click', () => {
             mobileNav.classList.remove('active');
         });
+    });
+    
+    // =============================================
+    // FUNÇÕES AUXILIARES
+    // =============================================
+    
+    function formatarData(data) {
+        if (!data) return '-';
+        const [ano, mes, dia] = data.split('-');
+        return `${dia}/${mes}/${ano}`;
+    }
+    
+    function calcularDiasRestantes(dataVencimento) {
+        if (!dataVencimento) return 0;
+        const hoje = new Date();
+        const vencimento = new Date(dataVencimento);
+        const diffTime = vencimento.getTime() - hoje.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    }
+    
+    function obterStatusCliente(diasRestantes) {
+        if (diasRestantes > 7) return 'ativo';
+        if (diasRestantes >= 0) return 'pendente';
+        return 'expirado';
+    }
+    
+    function obterNomePlano(valor) {
+        const planos = {
+            '1_mes_sem_adultos': '1 Mês (Sem Adultos)',
+            '1_mes_com_adultos': '1 Mês (Com Adultos)',
+            '2_mes_sem_adultos': '2 Meses (Sem Adultos)',
+            '2_mes_com_adultos': '2 Meses (Com Adultos)',
+            '3_mes_sem_adultos': '3 Meses (Sem Adultos)',
+            '3_mes_com_adultos': '3 Meses (Com Adultos)',
+            '6_mes_sem_adultos': '6 Meses (Sem Adultos)',
+            '6_mes_com_adultos': '6 Meses (Com Adultos)',
+            '1_ano_sem_adultos': '1 Ano (Sem Adultos)',
+            '1_ano_com_adultos': '1 Ano (Com Adultos)'
+        };
+        return planos[valor] || valor;
+    }
+    
+    function mostrarAlerta(mensagem, tipo) {
+        const alertDiv = document.getElementById('alert');
+        const alertMessage = document.getElementById('alert-message');
         
-        // Fechar menu mobile ao clicar em um link
-        document.querySelectorAll('.mobile-nav-link').forEach(link => {
-            link.addEventListener('click', () => {
-                mobileNav.classList.remove('active');
-            });
+        alertMessage.textContent = mensagem;
+        alertDiv.className = `alert alert-${tipo}`;
+        alertDiv.style.display = 'flex';
+        
+        setTimeout(() => {
+            alertDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    function atualizarPrecosModal(tipoCliente) {
+        const planos = document.querySelectorAll('.plano-option');
+        
+        planos.forEach(plano => {
+            const precoElement = plano.querySelector('.plano-preco');
+            const valorDireto = plano.getAttribute('data-valor-direto');
+            const valorRevenda = plano.getAttribute('data-valor-revenda');
+            
+            if (tipoCliente === 'revenda') {
+                precoElement.textContent = `R$ ${parseFloat(valorRevenda).toFixed(2)}`;
+                plano.setAttribute('data-valor', valorRevenda);
+            } else {
+                precoElement.textContent = `R$ ${parseFloat(valorDireto).toFixed(2)}`;
+                plano.setAttribute('data-valor', valorDireto);
+            }
         });
+    }
+    
+    // =============================================
+    // FUNÇÕES DE MENSAGENS
+    // =============================================
+    
+    function gerarMensagemCobranca(cliente) {
+        const dataVencimento = formatarData(cliente.data_vencimento);
         
-        // Funções auxiliares
-        function formatarData(data) {
-            if (!data) return '-';
-            const [ano, mes, dia] = data.split('-');
-            return `${dia}/${mes}/${ano}`;
-        }
+        const precoMensal = cliente.tipo === 'revenda' ? '13,00' : '20,00';
+        const precoBimestral = cliente.tipo === 'revenda' ? '26,00' : '35,00';
+        const precoTrimestral = cliente.tipo === 'revenda' ? '39,00' : '50,00';
+        const precoSemestral = cliente.tipo === 'revenda' ? '78,00' : '100,00';
+        const precoAnual = cliente.tipo === 'revenda' ? '156,00' : '180,00';
         
-        function calcularDiasRestantes(dataVencimento) {
-            if (!dataVencimento) return 0;
-            const hoje = new Date();
-            const vencimento = new Date(dataVencimento);
-            const diffTime = vencimento.getTime() - hoje.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays;
-        }
-        
-        function obterStatusCliente(diasRestantes) {
-            if (diasRestantes > 7) return 'ativo';
-            if (diasRestantes >= 0) return 'pendente';
-            return 'expirado';
-        }
-        
-        function obterNomePlano(valor) {
-            const planos = {
-                '1_mes_sem_adultos': '1 Mês (Sem Adultos)',
-                '1_mes_com_adultos': '1 Mês (Com Adultos)',
-                '2_mes_sem_adultos': '2 Meses (Sem Adultos)',
-                '2_mes_com_adultos': '2 Meses (Com Adultos)',
-                '3_mes_sem_adultos': '3 Meses (Sem Adultos)',
-                '3_mes_com_adultos': '3 Meses (Com Adultos)',
-                '6_mes_sem_adultos': '6 Meses (Sem Adultos)',
-                '6_mes_com_adultos': '6 Meses (Com Adultos)',
-                '1_ano_sem_adultos': '1 Ano (Sem Adultos)',
-                '1_ano_com_adultos': '1 Ano (Com Adultos)'
-            };
-            return planos[valor] || valor;
-        }
-        
-        function mostrarAlerta(mensagem, tipo) {
-            const alertDiv = document.getElementById('alert');
-            const alertMessage = document.getElementById('alert-message');
-            
-            alertMessage.textContent = mensagem;
-            alertDiv.className = `alert alert-${tipo}`;
-            alertDiv.style.display = 'flex';
-            
-            setTimeout(() => {
-                alertDiv.style.display = 'none';
-            }, 5000);
-        }
-        
-        // Função para atualizar preços no modal baseado no tipo do cliente
-        function atualizarPrecosModal(tipoCliente) {
-            const planos = document.querySelectorAll('.plano-option');
-            
-            planos.forEach(plano => {
-                const precoElement = plano.querySelector('.plano-preco');
-                const valorDireto = plano.getAttribute('data-valor-direto');
-                const valorRevenda = plano.getAttribute('data-valor-revenda');
-                
-                if (tipoCliente === 'revenda') {
-                    precoElement.textContent = `R$ ${parseFloat(valorRevenda).toFixed(2)}`;
-                    plano.setAttribute('data-valor', valorRevenda);
-                } else {
-                    precoElement.textContent = `R$ ${parseFloat(valorDireto).toFixed(2)}`;
-                    plano.setAttribute('data-valor', valorDireto);
-                }
-            });
-        }
-        
-        // Função para gerar mensagem de cobrança - SEM EMOJIS
-        function gerarMensagemCobranca(cliente) {
-            const dataVencimento = formatarData(cliente.data_vencimento);
-            const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
-            
-            // Definir preços baseado no tipo do cliente (mesmo preço para com e sem adultos)
-            const precoMensal = cliente.tipo === 'revenda' ? '13,00' : '20,00';
-            const precoBimestral = cliente.tipo === 'revenda' ? '26,00' : '35,00';
-            const precoTrimestral = cliente.tipo === 'revenda' ? '39,00' : '50,00';
-            const precoSemestral = cliente.tipo === 'revenda' ? '78,00' : '100,00';
-            const precoAnual = cliente.tipo === 'revenda' ? '156,00' : '180,00';
-            
-            let mensagem = `SUA ASSINATURA DE IPTV ESTÁ PRESTES A EXPIRAR! RENOVE AGORA!
+        let mensagem = `SUA ASSINATURA DE IPTV ESTÁ PRESTES A EXPIRAR! RENOVE AGORA!
 
 Olá, ${cliente.nome || 'Cliente'}!
 
@@ -1305,16 +1308,15 @@ Garanta seu entretenimento sem interrupções renovando hoje mesmo! Se precisar 
 
 Atenciosamente,
 Jeferson`;
-            
-            return mensagem;
-        }
         
-        // Função para gerar mensagem de confirmação de renovação - COM VALOR
-        function gerarMensagemConfirmacao(cliente, plano, dataVencimento, valor) {
-            const nomePlano = obterNomePlano(plano);
-            const dataHora = new Date().toLocaleString('pt-BR');
-            
-            let mensagem = `RENOVAÇÃO CONFIRMADA! SEU ACESSO AO IPTV ESTÁ ATIVO
+        return mensagem;
+    }
+    
+    function gerarMensagemConfirmacao(cliente, plano, dataVencimento, valor) {
+        const nomePlano = obterNomePlano(plano);
+        const dataHora = new Date().toLocaleString('pt-BR');
+        
+        let mensagem = `RENOVAÇÃO CONFIRMADA! SEU ACESSO AO IPTV ESTÁ ATIVO
 
 Olá, ${cliente.nome}!
 
@@ -1332,100 +1334,66 @@ Agradecemos por continuar conosco! Estamos felizes em oferecer a você o melhor 
 
 Atenciosamente,
 Jeferson`;
-            
-            return mensagem;
+        
+        return mensagem;
+    }
+    
+    function enviarMensagemWhatsApp(cliente, mensagem) {
+        const mensagemCodificada = encodeURIComponent(mensagem);
+        const telefoneCliente = cliente.telefone ? cliente.telefone.replace(/\D/g, '') : '';
+        
+        if (!telefoneCliente) {
+            mostrarAlerta('Telefone do cliente não encontrado', 'error');
+            return;
         }
         
-        // Função para enviar mensagem via WhatsApp
-        function enviarMensagemWhatsApp(cliente, mensagem) {
-            // Codificar a mensagem para URL
-            const mensagemCodificada = encodeURIComponent(mensagem);
+        const urlWhatsApp = `https://wa.me/55${telefoneCliente}?text=${mensagemCodificada}`;
+        window.open(urlWhatsApp, '_blank');
+    }
+    
+    // =============================================
+    // FUNÇÕES DE REGISTRO DE RENOVAÇÃO
+    // =============================================
+    
+    async function registrarRenovacao(cliente, planoNovo, valorRenovacao, novaDataVencimento) {
+        try {
+            console.log('📝 Tentando registrar renovação no histórico...');
             
-            // Obter número de telefone do cliente (remover caracteres não numéricos)
-            const telefoneCliente = cliente.telefone ? cliente.telefone.replace(/\D/g, '') : '';
+            const dadosRenovacao = {
+                cliente_id: cliente.id,
+                cliente_nome: cliente.nome,
+                cliente_telefone: cliente.telefone,
+                tipo_cliente: cliente.tipo,
+                plano_anterior: cliente.tipo_plano,
+                plano_novo: planoNovo,
+                valor_renovacao: valorRenovacao,
+                data_vencimento_anterior: cliente.data_vencimento,
+                data_vencimento_novo: novaDataVencimento,
+                revendedor: cliente.revendedor,
+                servidor: cliente.servidor
+            };
             
-            if (!telefoneCliente) {
-                mostrarAlerta('Telefone do cliente não encontrado', 'error');
-                return;
-            }
-            
-            // Criar URL do WhatsApp
-            const urlWhatsApp = `https://wa.me/55${telefoneCliente}?text=${mensagemCodificada}`;
-            
-            // Abrir WhatsApp em nova aba
-            window.open(urlWhatsApp, '_blank');
-        }
-        
-        // Função para registrar renovação no histórico
-        async function registrarRenovacao(cliente, planoNovo, valorRenovacao, novaDataVencimento) {
+            // Tenta o servidor Express primeiro
             try {
-                // Verificar se o servidor está disponível
-                try {
-                    const healthCheck = await fetch('/api/wake-up');
-                    if (!healthCheck.ok) {
-                        console.warn('Servidor não disponível, usando Supabase direto');
-                        return await registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento);
-                    }
-                } catch (e) {
-                    console.warn('Servidor não disponível, usando Supabase direto');
-                    return await registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento);
-                }
-
-                const dadosRenovacao = {
-                    cliente_id: cliente.id,
-                    cliente_nome: cliente.nome,
-                    cliente_telefone: cliente.telefone,
-                    tipo_cliente: cliente.tipo,
-                    plano_anterior: cliente.tipo_plano,
-                    plano_novo: planoNovo,
-                    valor_renovacao: valorRenovacao,
-                    data_vencimento_anterior: cliente.data_vencimento,
-                    data_vencimento_novo: novaDataVencimento,
-                    revendedor: cliente.revendedor,
-                    servidor: cliente.servidor
-                };
-
-                // Usar o endpoint do servidor Express
+                console.log('🔄 Tentando servidor Express...');
                 const response = await fetch('/api/renovacoes', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dadosRenovacao)
                 });
-
-                if (!response.ok) {
-                    throw new Error(`Erro ao registrar renovação: ${response.status}`);
+                
+                if (response.ok) {
+                    const resultado = await response.json();
+                    console.log('✅ Renovação registrada via servidor:', resultado);
+                    return resultado;
+                } else {
+                    console.warn('⚠️ Servidor falhou, tentando Supabase direto...');
+                    throw new Error('Servidor falhou');
                 }
-
-                const resultado = await response.json();
-                console.log('Renovação registrada com sucesso no histórico:', resultado);
-                return resultado;
-            } catch (error) {
-                console.error('Erro ao registrar renovação no histórico via servidor:', error);
-                // Tentar método alternativo
-                return await registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento);
-            }
-        }
-
-        // Método alternativo: registrar direto no Supabase se o servidor falhar
-        async function registrarRenovacaoDireto(cliente, planoNovo, valorRenovacao, novaDataVencimento) {
-            try {
-                const dadosRenovacao = {
-                    cliente_id: cliente.id,
-                    cliente_nome: cliente.nome,
-                    cliente_telefone: cliente.telefone,
-                    tipo_cliente: cliente.tipo,
-                    plano_anterior: cliente.tipo_plano,
-                    plano_novo: planoNovo,
-                    valor_renovacao: valorRenovacao,
-                    data_vencimento_anterior: cliente.data_vencimento,
-                    data_vencimento_novo: novaDataVencimento,
-                    revendedor: cliente.revendedor,
-                    servidor: cliente.servidor,
-                    data_renovacao: new Date().toISOString()
-                };
-
+            } catch (serverError) {
+                console.log('🔄 Tentando Supabase direto...');
+                
+                // Tenta diretamente no Supabase
                 const response = await fetch(`${supabaseUrl}/rest/v1/renovacoes_iptv`, {
                     method: 'POST',
                     headers: {
@@ -1434,479 +1402,552 @@ Jeferson`;
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify(dadosRenovacao)
+                    body: JSON.stringify({
+                        ...dadosRenovacao,
+                        data_renovacao: new Date().toISOString()
+                    })
                 });
-
+                
                 if (!response.ok) {
-                    throw new Error(`Erro ao registrar renovação direto: ${response.status}`);
+                    // Se falhar, apenas loga e continua
+                    const errorText = await response.text();
+                    console.warn('⚠️ Não foi possível registrar no histórico:', errorText);
+                    return null;
                 }
-
+                
                 const resultado = await response.json();
-                console.log('Renovação registrada diretamente no Supabase:', resultado);
+                console.log('✅ Renovação registrada diretamente no Supabase:', resultado);
                 return resultado[0];
-            } catch (error) {
-                console.error('Erro ao registrar renovação diretamente:', error);
-                // Mesmo se falhar, continuamos o processo
-                return null;
             }
+        } catch (error) {
+            console.warn('⚠️ Erro não crítico ao registrar renovação:', error);
+            return null;
+        }
+    }
+    
+    // =============================================
+    // FUNÇÕES DE MODAL
+    // =============================================
+    
+    function abrirModalWhatsApp(clienteId) {
+        clienteWhatsApp = clientes.find(c => c.id == clienteId);
+        
+        if (!clienteWhatsApp) {
+            mostrarAlerta('Cliente não encontrado', 'error');
+            return;
         }
         
-        // Abrir modal de visualização da mensagem do WhatsApp
-        function abrirModalWhatsApp(clienteId) {
-            clienteWhatsApp = clientes.find(c => c.id == clienteId);
-            
-            if (!clienteWhatsApp) {
-                mostrarAlerta('Cliente não encontrado', 'error');
-                return;
-            }
-            
-            // Preencher informações do modal
-            document.getElementById('whatsappClienteNome').textContent = clienteWhatsApp.nome || 'N/A';
-            document.getElementById('whatsappClienteTelefone').textContent = clienteWhatsApp.telefone || 'N/A';
-            
-            // Gerar e exibir a mensagem
-            const mensagem = gerarMensagemCobranca(clienteWhatsApp);
-            document.getElementById('mensagemWhatsApp').textContent = mensagem;
-            
-            // Abrir modal
-            document.getElementById('modalWhatsApp').classList.add('active');
-        }
+        document.getElementById('whatsappClienteNome').textContent = clienteWhatsApp.nome || 'N/A';
+        document.getElementById('whatsappClienteTelefone').textContent = clienteWhatsApp.telefone || 'N/A';
         
-        // Fechar modal do WhatsApp
-        function fecharModalWhatsApp() {
-            document.getElementById('modalWhatsApp').classList.remove('active');
-            clienteWhatsApp = null;
-        }
+        const mensagem = gerarMensagemCobranca(clienteWhatsApp);
+        document.getElementById('mensagemWhatsApp').textContent = mensagem;
         
-        // Abrir modal de confirmação de renovação - ATUALIZADA
-        function abrirModalConfirmacao(cliente, plano, dataVencimento, valor) {
-            // Salvar o cliente renovado
-            clienteRenovado = cliente;
+        document.getElementById('modalWhatsApp').classList.add('active');
+    }
+    
+    function fecharModalWhatsApp() {
+        document.getElementById('modalWhatsApp').classList.remove('active');
+        clienteWhatsApp = null;
+    }
+    
+    function abrirModalConfirmacao(cliente, plano, dataVencimento, valor) {
+        clienteRenovado = cliente;
+        
+        const infoDiv = document.getElementById('confirmacaoInfo');
+        infoDiv.innerHTML = '';
+        
+        const dataHora = new Date().toLocaleString('pt-BR');
+        
+        const itensInfo = [
+            { label: 'Cliente:', value: cliente.nome || 'N/A' },
+            { label: 'Telefone:', value: cliente.telefone || 'N/A' },
+            { label: 'Tipo:', value: cliente.tipo === 'direto' ? 'Direto' : 'Revenda' },
+            { label: 'Plano:', value: obterNomePlano(plano) },
+            { label: 'Valor:', value: `R$ ${valor.toFixed(2)}` },
+            { label: 'Novo Vencimento:', value: formatarData(dataVencimento) },
+            { label: 'Data e Hora:', value: dataHora }
+        ];
+        
+        itensInfo.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'info-item';
+            div.innerHTML = `
+                <span class="info-label">${item.label}</span>
+                <span class="info-value">${item.value}</span>
+            `;
+            infoDiv.appendChild(div);
+        });
+        
+        const mensagem = gerarMensagemConfirmacao(cliente, plano, formatarData(dataVencimento), valor);
+        document.getElementById('mensagemConfirmacao').textContent = mensagem;
+        
+        document.getElementById('modalConfirmacaoRenovacao').classList.add('active');
+    }
+    
+    function fecharModalConfirmacao() {
+        document.getElementById('modalConfirmacaoRenovacao').classList.remove('active');
+        clienteRenovado = null;
+    }
+    
+    // =============================================
+    // FUNÇÕES DE CLIENTES
+    // =============================================
+    
+    async function testarConexaoSupabase() {
+        try {
+            console.log('🔍 Testando conexão com Supabase...');
             
-            // Preencher informações do modal
-            const infoDiv = document.getElementById('confirmacaoInfo');
-            infoDiv.innerHTML = ''; // Limpar conteúdo anterior
-            
-            const dataHora = new Date().toLocaleString('pt-BR');
-            
-            const itensInfo = [
-                { label: 'Cliente:', value: cliente.nome || 'N/A' },
-                { label: 'Telefone:', value: cliente.telefone || 'N/A' },
-                { label: 'Tipo:', value: cliente.tipo === 'direto' ? 'Direto' : 'Revenda' },
-                { label: 'Plano:', value: obterNomePlano(plano) },
-                { label: 'Valor:', value: `R$ ${valor.toFixed(2)}` },
-                { label: 'Novo Vencimento:', value: formatarData(dataVencimento) },
-                { label: 'Data e Hora:', value: dataHora }
-            ];
-            
-            itensInfo.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'info-item';
-                div.innerHTML = `
-                    <span class="info-label">${item.label}</span>
-                    <span class="info-value">${item.value}</span>
-                `;
-                infoDiv.appendChild(div);
+            const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?limit=1`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                }
             });
             
-            // Gerar e exibir a mensagem
-            const mensagem = gerarMensagemConfirmacao(cliente, plano, formatarData(dataVencimento), valor);
-            document.getElementById('mensagemConfirmacao').textContent = mensagem;
+            if (!response.ok) {
+                console.error('❌ Erro na conexão Supabase:', response.status);
+                return false;
+            }
             
-            // Abrir modal
-            document.getElementById('modalConfirmacaoRenovacao').classList.add('active');
+            console.log('✅ Conexão Supabase OK');
+            return true;
+        } catch (error) {
+            console.error('❌ Erro na conexão Supabase:', error);
+            return false;
         }
-        
-        // Fechar modal de confirmação
-        function fecharModalConfirmacao() {
-            document.getElementById('modalConfirmacaoRenovacao').classList.remove('active');
-            clienteRenovado = null;
-        }
-        
-        // Carregar clientes do Supabase
-        async function carregarClientes() {
-            try {
-                const tbody = document.getElementById('clientesTableBody');
-                tbody.innerHTML = '<tr><td colspan="10" class="loading"><div class="spinner"></div></td></tr>';
-                
-                const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?select=*`, {
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Erro ao carregar clientes: ${response.status}`);
-                }
-                
-                clientes = await response.json();
-                
-                // Ordenar clientes por dias restantes (menos dias primeiro)
-                clientes.sort((a, b) => {
-                    const diasA = calcularDiasRestantes(a.data_vencimento);
-                    const diasB = calcularDiasRestantes(b.data_vencimento);
-                    return diasA - diasB;
-                });
-                
-                renderizarClientes(clientes);
-                
-            } catch (error) {
-                console.error('Erro ao carregar clientes:', error);
-                mostrarAlerta('Erro ao carregar clientes. Verifique o console para mais detalhes.', 'error');
-                
-                const tbody = document.getElementById('clientesTableBody');
+    }
+    
+    async function carregarClientes() {
+        try {
+            const tbody = document.getElementById('clientesTableBody');
+            
+            // Testar conexão primeiro
+            const conexaoOk = await testarConexaoSupabase();
+            if (!conexaoOk) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="10" style="text-align: center; padding: 30px; color: var(--error-color);">
                             <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                            Erro ao carregar clientes
+                            Erro de conexão com o banco de dados
+                            <br>
+                            <button onclick="carregarClientes()" class="btn btn-primary" style="margin-top: 10px;">
+                                <i class="fas fa-sync-alt"></i> Tentar novamente
+                            </button>
                         </td>
                     </tr>
                 `;
+                return;
             }
-        }
-        
-        // Renderizar clientes na tabela - CORRIGIDO para usar campo "nome"
-        function renderizarClientes(clientesParaRenderizar) {
+            
+            tbody.innerHTML = '<tr><td colspan="10" class="loading"><div class="spinner"></div></td></tr>';
+            
+            const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?select=*`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erro ao carregar clientes: ${response.status}`);
+            }
+            
+            clientes = await response.json();
+            
+            // Ordenar por dias restantes
+            clientes.sort((a, b) => {
+                const diasA = calcularDiasRestantes(a.data_vencimento);
+                const diasB = calcularDiasRestantes(b.data_vencimento);
+                return diasA - diasB;
+            });
+            
+            renderizarClientes(clientes);
+            
+        } catch (error) {
+            console.error('❌ Erro ao carregar clientes:', error);
+            mostrarAlerta('Erro ao carregar clientes. Verifique o console.', 'error');
+            
             const tbody = document.getElementById('clientesTableBody');
-            tbody.innerHTML = '';
-            
-            if (clientesParaRenderizar.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="10" style="text-align: center; padding: 30px;">
-                            <i class="fas fa-search" style="font-size: 2rem; color: var(--text-light); margin-bottom: 10px; display: block;"></i>
-                            Nenhum cliente encontrado
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            clientesParaRenderizar.forEach(cliente => {
-                const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
-                const status = obterStatusCliente(diasRestantes);
-                
-                let classeDias = 'dias-neutro';
-                if (diasRestantes > 30) classeDias = 'dias-positivo';
-                if (diasRestantes < 0) classeDias = 'dias-negativo';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${cliente.nome || 'N/A'}</td>
-                    <td>${cliente.telefone || 'N/A'}</td>
-                    <td>${cliente.tipo === 'direto' ? 'Direto' : 'Revenda'}</td>
-                    <td>${cliente.revendedor || '-'}</td>
-                    <td>${obterNomePlano(cliente.tipo_plano)}</td>
-                    <td>${cliente.servidor || '-'}</td>
-                    <td>${formatarData(cliente.data_vencimento)}</td>
-                    <td class="dias-restantes ${classeDias}">${diasRestantes} dias</td>
-                    <td><span class="status-badge status-${status}">${status}</span></td>
-                    <td>
-                        <div class="btn-group">
-                            <button class="btn btn-primary btn-sm renovar-btn" data-id="${cliente.id}" title="Renovar plano">
-                                <i class="fas fa-redo-alt"></i>
-                            </button>
-                            <button class="btn btn-whatsapp btn-sm whatsapp-btn" data-id="${cliente.id}" title="Enviar mensagem de cobrança">
-                                <i class="fab fa-whatsapp"></i>
-                            </button>
-                        </div>
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align: center; padding: 30px; color: var(--error-color);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        Erro ao carregar clientes: ${error.message}
                     </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-            
-            // Adicionar event listeners aos botões de renovação
-            document.querySelectorAll('.renovar-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const clienteId = this.getAttribute('data-id');
-                    abrirModalRenovacao(clienteId);
-                });
-            });
-            
-            // Adicionar event listeners aos botões do WhatsApp - MODIFICADO
-            document.querySelectorAll('.whatsapp-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const clienteId = this.getAttribute('data-id');
-                    abrirModalWhatsApp(clienteId);
-                });
-            });
+                </tr>
+            `;
+        }
+    }
+    
+    function renderizarClientes(clientesParaRenderizar) {
+        const tbody = document.getElementById('clientesTableBody');
+        tbody.innerHTML = '';
+        
+        if (clientesParaRenderizar.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align: center; padding: 30px;">
+                        <i class="fas fa-search" style="font-size: 2rem; color: var(--text-light); margin-bottom: 10px; display: block;"></i>
+                        Nenhum cliente encontrado
+                    </td>
+                </tr>
+            `;
+            return;
         }
         
-        // Abrir modal de renovação
-        function abrirModalRenovacao(clienteId) {
-            clienteAtual = clientes.find(c => c.id == clienteId);
+        clientesParaRenderizar.forEach(cliente => {
+            const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
+            const status = obterStatusCliente(diasRestantes);
             
-            if (!clienteAtual) {
-                mostrarAlerta('Cliente não encontrado', 'error');
-                return;
-            }
+            let classeDias = 'dias-neutro';
+            if (diasRestantes > 30) classeDias = 'dias-positivo';
+            if (diasRestantes < 0) classeDias = 'dias-negativo';
             
-            const diasRestantes = calcularDiasRestantes(clienteAtual.data_vencimento);
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${cliente.nome || 'N/A'}</td>
+                <td>${cliente.telefone || 'N/A'}</td>
+                <td>${cliente.tipo === 'direto' ? 'Direto' : 'Revenda'}</td>
+                <td>${cliente.revendedor || '-'}</td>
+                <td>${obterNomePlano(cliente.tipo_plano)}</td>
+                <td>${cliente.servidor || '-'}</td>
+                <td>${formatarData(cliente.data_vencimento)}</td>
+                <td class="dias-restantes ${classeDias}">${diasRestantes} dias</td>
+                <td><span class="status-badge status-${status}">${status}</span></td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm renovar-btn" data-id="${cliente.id}" title="Renovar plano">
+                            <i class="fas fa-redo-alt"></i>
+                        </button>
+                        <button class="btn btn-whatsapp btn-sm whatsapp-btn" data-id="${cliente.id}" title="Enviar mensagem de cobrança">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
             
-            // Preencher informações do modal
-            document.getElementById('modalClienteNome').textContent = clienteAtual.nome || 'N/A';
-            document.getElementById('modalClienteTelefone').textContent = clienteAtual.telefone || 'N/A';
-            document.getElementById('modalClienteTipo').textContent = clienteAtual.tipo === 'direto' ? 'Direto' : 'Revenda';
-            document.getElementById('modalPlanoAtual').textContent = obterNomePlano(clienteAtual.tipo_plano);
-            document.getElementById('modalVencimentoAtual').textContent = formatarData(clienteAtual.data_vencimento);
-            document.getElementById('modalDiasRestantes').textContent = `${diasRestantes} dias`;
-            
-            // Atualizar preços baseado no tipo do cliente
-            atualizarPrecosModal(clienteAtual.tipo);
-            
-            // Resetar seleção de plano
-            document.querySelectorAll('.plano-option').forEach(option => {
-                option.classList.remove('selected');
+            tbody.appendChild(row);
+        });
+        
+        // Event listeners para botões
+        document.querySelectorAll('.renovar-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const clienteId = this.getAttribute('data-id');
+                abrirModalRenovacao(clienteId);
+            });
+        });
+        
+        document.querySelectorAll('.whatsapp-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const clienteId = this.getAttribute('data-id');
+                abrirModalWhatsApp(clienteId);
+            });
+        });
+    }
+    
+    function abrirModalRenovacao(clienteId) {
+        clienteAtual = clientes.find(c => c.id == clienteId);
+        
+        if (!clienteAtual) {
+            mostrarAlerta('Cliente não encontrado', 'error');
+            return;
+        }
+        
+        const diasRestantes = calcularDiasRestantes(clienteAtual.data_vencimento);
+        
+        document.getElementById('modalClienteNome').textContent = clienteAtual.nome || 'N/A';
+        document.getElementById('modalClienteTelefone').textContent = clienteAtual.telefone || 'N/A';
+        document.getElementById('modalClienteTipo').textContent = clienteAtual.tipo === 'direto' ? 'Direto' : 'Revenda';
+        document.getElementById('modalPlanoAtual').textContent = obterNomePlano(clienteAtual.tipo_plano);
+        document.getElementById('modalVencimentoAtual').textContent = formatarData(clienteAtual.data_vencimento);
+        document.getElementById('modalDiasRestantes').textContent = `${diasRestantes} dias`;
+        
+        atualizarPrecosModal(clienteAtual.tipo);
+        
+        document.querySelectorAll('.plano-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        document.getElementById('novoVencimentoContainer').style.display = 'none';
+        document.getElementById('confirmarRenovacao').disabled = true;
+        
+        document.getElementById('modalRenovacao').classList.add('active');
+    }
+    
+    function fecharModalRenovacao() {
+        document.getElementById('modalRenovacao').classList.remove('active');
+        clienteAtual = null;
+    }
+    
+    function calcularNovoVencimento(planoSelecionado) {
+        const hoje = new Date();
+        let novaData = new Date(clienteAtual.data_vencimento);
+        
+        if (novaData < hoje) {
+            novaData = new Date();
+        }
+        
+        switch(planoSelecionado) {
+            case '1_mes_sem_adultos':
+            case '1_mes_com_adultos':
+                novaData.setMonth(novaData.getMonth() + 1);
+                break;
+            case '2_mes_sem_adultos':
+            case '2_mes_com_adultos':
+                novaData.setMonth(novaData.getMonth() + 2);
+                break;
+            case '3_mes_sem_adultos':
+            case '3_mes_com_adultos':
+                novaData.setMonth(novaData.getMonth() + 3);
+                break;
+            case '6_mes_sem_adultos':
+            case '6_mes_com_adultos':
+                novaData.setMonth(novaData.getMonth() + 6);
+                break;
+            case '1_ano_sem_adultos':
+            case '1_ano_com_adultos':
+                novaData.setFullYear(novaData.getFullYear() + 1);
+                break;
+        }
+        
+        return novaData.toISOString().split('T')[0];
+    }
+    
+    // =============================================
+    // FUNÇÃO PRINCIPAL DE RENOVAÇÃO (CORRIGIDA)
+    // =============================================
+    
+    async function confirmarRenovacao() {
+        const planoSelecionado = document.querySelector('.plano-option.selected');
+        
+        if (!planoSelecionado || !clienteAtual) {
+            mostrarAlerta('Selecione um plano para renovação', 'error');
+            return;
+        }
+        
+        const tipoPlano = planoSelecionado.getAttribute('data-plano');
+        const valorPlano = parseFloat(planoSelecionado.getAttribute('data-valor'));
+        const novaDataVencimento = calcularNovoVencimento(tipoPlano);
+        
+        try {
+            console.log('🔄 Iniciando renovação...', {
+                cliente: clienteAtual.id,
+                plano: tipoPlano,
+                valor: valorPlano,
+                novoVencimento: novaDataVencimento
             });
             
-            document.getElementById('novoVencimentoContainer').style.display = 'none';
-            document.getElementById('confirmarRenovacao').disabled = true;
-            
-            // Abrir modal
-            document.getElementById('modalRenovacao').classList.add('active');
-        }
-        
-        // Fechar modal de renovação
-        function fecharModalRenovacao() {
-            document.getElementById('modalRenovacao').classList.remove('active');
-            clienteAtual = null;
-        }
-        
-        // Calcular novo vencimento
-        function calcularNovoVencimento(planoSelecionado) {
-            const hoje = new Date();
-            let novaData = new Date(clienteAtual.data_vencimento);
-            
-            // Se a data de vencimento já passou, começar a contar de hoje
-            if (novaData < hoje) {
-                novaData = new Date();
-            }
-            
-            switch(planoSelecionado) {
-                case '1_mes_sem_adultos':
-                case '1_mes_com_adultos':
-                    novaData.setMonth(novaData.getMonth() + 1);
-                    break;
-                case '2_mes_sem_adultos':
-                case '2_mes_com_adultos':
-                    novaData.setMonth(novaData.getMonth() + 2);
-                    break;
-                case '3_mes_sem_adultos':
-                case '3_mes_com_adultos':
-                    novaData.setMonth(novaData.getMonth() + 3);
-                    break;
-                case '6_mes_sem_adultos':
-                case '6_mes_com_adultos':
-                    novaData.setMonth(novaData.getMonth() + 6);
-                    break;
-                case '1_ano_sem_adultos':
-                case '1_ano_com_adultos':
-                    novaData.setFullYear(novaData.getFullYear() + 1);
-                    break;
-            }
-            
-            return novaData.toISOString().split('T')[0];
-        }
-        
-        // Confirmar renovação - ATUALIZADA
-        async function confirmarRenovacao() {
-            const planoSelecionado = document.querySelector('.plano-option.selected');
-            
-            if (!planoSelecionado || !clienteAtual) {
-                mostrarAlerta('Selecione um plano para renovação', 'error');
-                return;
-            }
-            
-            const tipoPlano = planoSelecionado.getAttribute('data-plano');
-            const valorPlano = parseFloat(planoSelecionado.getAttribute('data-valor'));
-            const novaDataVencimento = calcularNovoVencimento(tipoPlano);
-            
+            // 1. Registrar no histórico (não crítico)
             try {
-                // 1. Registrar renovação no histórico (ANTES de atualizar o cliente)
-                const registroRenovacao = await registrarRenovacao(
-                    clienteAtual,
-                    tipoPlano,
-                    valorPlano,
-                    novaDataVencimento
-                );
+                console.log('📝 Registrando no histórico...');
+                await registrarRenovacao(clienteAtual, tipoPlano, valorPlano, novaDataVencimento);
+            } catch (histError) {
+                console.warn('⚠️ Histórico não registrado:', histError.message);
+            }
+            
+            // 2. Atualizar cliente - APENAS campos que existem na tabela
+            const dadosAtualizacao = {
+                tipo_plano: tipoPlano,
+                valor_plano: valorPlano,
+                data_vencimento: novaDataVencimento
+                // REMOVIDO: ultima_renovacao - pode não existir na tabela
+            };
+            
+            console.log('📤 Atualizando cliente:', dadosAtualizacao);
+            
+            const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteAtual.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(dadosAtualizacao)
+            });
+            
+            console.log('📥 Resposta:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Erro completo:', errorText);
                 
-                // 2. Atualizar o cliente no Supabase
-                const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteAtual.id}`, {
-                    method: 'PATCH',
+                // Tentar método alternativo - PUT em vez de PATCH
+                console.log('🔄 Tentando método alternativo (PUT)...');
+                
+                const putResponse = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteAtual.id}`, {
+                    method: 'PUT',
                     headers: {
                         'apikey': supabaseKey,
                         'Authorization': `Bearer ${supabaseKey}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'return=minimal'
                     },
-                    body: JSON.stringify({
-                        tipo_plano: tipoPlano,
-                        valor_plano: valorPlano,
-                        data_vencimento: novaDataVencimento,
-                        ultima_renovacao: new Date().toISOString()
-                    })
+                    body: JSON.stringify(dadosAtualizacao)
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`Erro ao atualizar cliente: ${response.status}`);
+                if (!putResponse.ok) {
+                    const putErrorText = await putResponse.text();
+                    throw new Error(`Erro ao atualizar cliente: ${putResponse.status} - ${putErrorText}`);
                 }
-                
-                // 3. Atualizar localmente
-                const clienteIndex = clientes.findIndex(c => c.id === clienteAtual.id);
-                if (clienteIndex !== -1) {
-                    clientes[clienteIndex].tipo_plano = tipoPlano;
-                    clientes[clienteIndex].valor_plano = valorPlano;
-                    clientes[clienteIndex].data_vencimento = novaDataVencimento;
-                    clientes[clienteIndex].ultima_renovacao = new Date().toISOString();
-                }
-                
-                // 4. SALVAR O CLIENTE ANTES DE FECHAR O MODAL
-                const clienteRenovacao = {...clienteAtual};
-                
-                // 5. Fechar modal de renovação
-                fecharModalRenovacao();
-                
-                // 6. Abrir modal de confirmação com informações da renovação
-                abrirModalConfirmacao(clienteRenovacao, tipoPlano, novaDataVencimento, valorPlano);
-                
-                // 7. Atualizar a tabela
-                renderizarClientes(clientes);
-                
-                // 8. Mostrar mensagem de sucesso
-                mostrarAlerta(`Renovação realizada com sucesso para ${clienteAtual.nome}!`, 'success');
-                
-            } catch (error) {
-                console.error('Erro ao renovar plano:', error);
-                mostrarAlerta('Erro ao renovar plano. Verifique o console para mais detalhes.', 'error');
             }
-        }
-        
-        // Filtrar clientes
-        function filtrarClientes() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            const servidorFilter = document.getElementById('servidorFilter').value;
-            const revendedorFilter = document.getElementById('revendedorFilter').value;
-            const vencimentoFilter = document.getElementById('vencimentoFilter').value;
-            const valorFilter = document.getElementById('valorFilter').value;
             
-            const clientesFiltrados = clientes.filter(cliente => {
-                // Filtro por busca
-                const matchSearch = (cliente.nome && cliente.nome.toLowerCase().includes(searchTerm)) || 
-                                   (cliente.telefone && cliente.telefone.includes(searchTerm));
-                
-                // Filtro por status
-                const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
-                const status = obterStatusCliente(diasRestantes);
-                const matchStatus = !statusFilter || status === statusFilter;
-                
-                // Filtro por servidor
-                const matchServidor = !servidorFilter || cliente.servidor === servidorFilter;
-                
-                // Filtro por revendedor
-                const matchRevendedor = !revendedorFilter || cliente.revendedor === revendedorFilter;
-                
-                // Filtro por vencimento
-                let matchVencimento = true;
-                if (vencimentoFilter) {
-                    switch(vencimentoFilter) {
-                        case 'hoje':
-                            matchVencimento = diasRestantes === 0;
-                            break;
-                        case '3_dias':
-                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 3;
-                            break;
-                        case '7_dias':
-                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 7;
-                            break;
-                        case '15_dias':
-                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 15;
-                            break;
-                        case '30_dias':
-                            matchVencimento = diasRestantes >= 0 && diasRestantes <= 30;
-                            break;
-                        case 'expirados':
-                            matchVencimento = diasRestantes < 0;
-                            break;
-                    }
+            // 3. Atualizar localmente
+            const clienteIndex = clientes.findIndex(c => c.id === clienteAtual.id);
+            if (clienteIndex !== -1) {
+                clientes[clienteIndex].tipo_plano = tipoPlano;
+                clientes[clienteIndex].valor_plano = valorPlano;
+                clientes[clienteIndex].data_vencimento = novaDataVencimento;
+            }
+            
+            // 4. Mostrar confirmação
+            const clienteRenovacao = {...clienteAtual};
+            fecharModalRenovacao();
+            abrirModalConfirmacao(clienteRenovacao, tipoPlano, novaDataVencimento, valorPlano);
+            
+            // 5. Atualizar tabela
+            renderizarClientes(clientes);
+            
+            // 6. Mensagem de sucesso
+            mostrarAlerta(`✅ Renovação realizada com sucesso para ${clienteAtual.nome}!`, 'success');
+            
+        } catch (error) {
+            console.error('❌ Erro ao renovar plano:', error);
+            mostrarAlerta(`❌ Erro ao renovar plano: ${error.message}`, 'error');
+        }
+    }
+    
+    // =============================================
+    // FILTROS
+    // =============================================
+    
+    function filtrarClientes() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const servidorFilter = document.getElementById('servidorFilter').value;
+        const revendedorFilter = document.getElementById('revendedorFilter').value;
+        const vencimentoFilter = document.getElementById('vencimentoFilter').value;
+        const valorFilter = document.getElementById('valorFilter').value;
+        
+        const clientesFiltrados = clientes.filter(cliente => {
+            const matchSearch = (cliente.nome && cliente.nome.toLowerCase().includes(searchTerm)) || 
+                               (cliente.telefone && cliente.telefone.includes(searchTerm));
+            
+            const diasRestantes = calcularDiasRestantes(cliente.data_vencimento);
+            const status = obterStatusCliente(diasRestantes);
+            const matchStatus = !statusFilter || status === statusFilter;
+            
+            const matchServidor = !servidorFilter || cliente.servidor === servidorFilter;
+            const matchRevendedor = !revendedorFilter || cliente.revendedor === revendedorFilter;
+            
+            let matchVencimento = true;
+            if (vencimentoFilter) {
+                switch(vencimentoFilter) {
+                    case 'hoje':
+                        matchVencimento = diasRestantes === 0;
+                        break;
+                    case '3_dias':
+                        matchVencimento = diasRestantes >= 0 && diasRestantes <= 3;
+                        break;
+                    case '7_dias':
+                        matchVencimento = diasRestantes >= 0 && diasRestantes <= 7;
+                        break;
+                    case '15_dias':
+                        matchVencimento = diasRestantes >= 0 && diasRestantes <= 15;
+                        break;
+                    case '30_dias':
+                        matchVencimento = diasRestantes >= 0 && diasRestantes <= 30;
+                        break;
+                    case 'expirados':
+                        matchVencimento = diasRestantes < 0;
+                        break;
                 }
-                
-                // Filtro por valor do plano
-                const matchValor = !valorFilter || cliente.valor_plano == valorFilter;
-                
-                return matchSearch && matchStatus && matchServidor && matchRevendedor && matchVencimento && matchValor;
-            });
+            }
             
-            renderizarClientes(clientesFiltrados);
-        }
+            const matchValor = !valorFilter || cliente.valor_plano == valorFilter;
+            
+            return matchSearch && matchStatus && matchServidor && matchRevendedor && matchVencimento && matchValor;
+        });
         
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', function() {
-            // Carregar clientes
-            carregarClientes();
-            
-            // Event listeners para filtros
-            document.getElementById('searchInput').addEventListener('input', filtrarClientes);
-            document.getElementById('statusFilter').addEventListener('change', filtrarClientes);
-            document.getElementById('servidorFilter').addEventListener('change', filtrarClientes);
-            document.getElementById('revendedorFilter').addEventListener('change', filtrarClientes);
-            document.getElementById('vencimentoFilter').addEventListener('change', filtrarClientes);
-            document.getElementById('valorFilter').addEventListener('change', filtrarClientes);
-            document.getElementById('refreshBtn').addEventListener('click', carregarClientes);
-            
-            // Event listeners para o modal de renovação
-            document.getElementById('modalClose').addEventListener('click', fecharModalRenovacao);
-            document.getElementById('cancelarRenovacao').addEventListener('click', fecharModalRenovacao);
-            document.getElementById('confirmarRenovacao').addEventListener('click', confirmarRenovacao);
-            
-            // Event listeners para seleção de plano
-            document.querySelectorAll('.plano-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    // Remover seleção anterior
-                    document.querySelectorAll('.plano-option').forEach(opt => {
-                        opt.classList.remove('selected');
-                    });
-                    
-                    // Selecionar atual
-                    this.classList.add('selected');
-                    
-                    // Calcular e exibir novo vencimento
-                    const tipoPlano = this.getAttribute('data-plano');
-                    const valorPlano = this.getAttribute('data-valor');
-                    const novaData = calcularNovoVencimento(tipoPlano);
-                    
-                    document.getElementById('novoVencimento').textContent = formatarData(novaData);
-                    document.getElementById('valorRenovacao').textContent = `R$ ${parseFloat(valorPlano).toFixed(2)}`;
-                    document.getElementById('novoVencimentoContainer').style.display = 'block';
-                    document.getElementById('confirmarRenovacao').disabled = false;
+        renderizarClientes(clientesFiltrados);
+    }
+    
+    // =============================================
+    // INICIALIZAÇÃO
+    // =============================================
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Iniciando sistema de renovação...');
+        console.log('🔗 Supabase URL:', supabaseUrl);
+        console.log('🔐 Supabase Key:', supabaseKey ? '✅ Presente' : '❌ Faltando');
+        
+        // Testar conexão inicial
+        fetch('/api/wake-up').catch(() => {
+            console.warn('⚠️ Servidor não está rodando, usando Supabase direto');
+        });
+        
+        // Carregar clientes
+        carregarClientes();
+        
+        // Event listeners para filtros
+        document.getElementById('searchInput').addEventListener('input', filtrarClientes);
+        document.getElementById('statusFilter').addEventListener('change', filtrarClientes);
+        document.getElementById('servidorFilter').addEventListener('change', filtrarClientes);
+        document.getElementById('revendedorFilter').addEventListener('change', filtrarClientes);
+        document.getElementById('vencimentoFilter').addEventListener('change', filtrarClientes);
+        document.getElementById('valorFilter').addEventListener('change', filtrarClientes);
+        document.getElementById('refreshBtn').addEventListener('click', carregarClientes);
+        
+        // Modal de renovação
+        document.getElementById('modalClose').addEventListener('click', fecharModalRenovacao);
+        document.getElementById('cancelarRenovacao').addEventListener('click', fecharModalRenovacao);
+        document.getElementById('confirmarRenovacao').addEventListener('click', confirmarRenovacao);
+        
+        // Seleção de plano
+        document.querySelectorAll('.plano-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.plano-option').forEach(opt => {
+                    opt.classList.remove('selected');
                 });
-            });
-            
-            // Event listeners para o modal do WhatsApp
-            document.getElementById('modalWhatsAppClose').addEventListener('click', fecharModalWhatsApp);
-            document.getElementById('cancelarWhatsApp').addEventListener('click', fecharModalWhatsApp);
-            document.getElementById('enviarWhatsApp').addEventListener('click', function() {
-                if (clienteWhatsApp) {
-                    const mensagem = gerarMensagemCobranca(clienteWhatsApp);
-                    enviarMensagemWhatsApp(clienteWhatsApp, mensagem);
-                    fecharModalWhatsApp();
-                }
-            });
-            
-            // NOVOS EVENT LISTENERS PARA O MODAL DE CONFIRMAÇÃO
-            document.getElementById('modalConfirmacaoClose').addEventListener('click', fecharModalConfirmacao);
-            document.getElementById('fecharConfirmacao').addEventListener('click', fecharModalConfirmacao);
-            document.getElementById('enviarConfirmacaoWhatsApp').addEventListener('click', function() {
-                if (clienteRenovado) {
-                    const mensagem = document.getElementById('mensagemConfirmacao').textContent;
-                    enviarMensagemWhatsApp(clienteRenovado, mensagem);
-                    fecharModalConfirmacao();
-                }
+                
+                this.classList.add('selected');
+                
+                const tipoPlano = this.getAttribute('data-plano');
+                const valorPlano = this.getAttribute('data-valor');
+                const novaData = calcularNovoVencimento(tipoPlano);
+                
+                document.getElementById('novoVencimento').textContent = formatarData(novaData);
+                document.getElementById('valorRenovacao').textContent = `R$ ${parseFloat(valorPlano).toFixed(2)}`;
+                document.getElementById('novoVencimentoContainer').style.display = 'block';
+                document.getElementById('confirmarRenovacao').disabled = false;
             });
         });
-    </script>
+        
+        // Modal WhatsApp
+        document.getElementById('modalWhatsAppClose').addEventListener('click', fecharModalWhatsApp);
+        document.getElementById('cancelarWhatsApp').addEventListener('click', fecharModalWhatsApp);
+        document.getElementById('enviarWhatsApp').addEventListener('click', function() {
+            if (clienteWhatsApp) {
+                const mensagem = gerarMensagemCobranca(clienteWhatsApp);
+                enviarMensagemWhatsApp(clienteWhatsApp, mensagem);
+                fecharModalWhatsApp();
+            }
+        });
+        
+        // Modal confirmação
+        document.getElementById('modalConfirmacaoClose').addEventListener('click', fecharModalConfirmacao);
+        document.getElementById('fecharConfirmacao').addEventListener('click', fecharModalConfirmacao);
+        document.getElementById('enviarConfirmacaoWhatsApp').addEventListener('click', function() {
+            if (clienteRenovado) {
+                const mensagem = document.getElementById('mensagemConfirmacao').textContent;
+                enviarMensagemWhatsApp(clienteRenovado, mensagem);
+                fecharModalConfirmacao();
+            }
+        });
+        
+        console.log('✅ Sistema inicializado com sucesso!');
+    });
+</script>
 </body>
 </html>
