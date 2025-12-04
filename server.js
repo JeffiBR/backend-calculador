@@ -25,6 +25,70 @@ const upload = multer({
 });
 
 // =============================================
+// FUNÇÕES AUXILIARES
+// =============================================
+
+// Função para garantir que a tabela existe com todas as colunas
+async function garantirTabelaGastos() {
+    try {
+        // Verificar se a tabela existe
+        const { error: checkError } = await supabase
+            .from('gastos_mensais')
+            .select('id')
+            .limit(1);
+
+        if (checkError && checkError.code === '42P01') {
+            // Tabela não existe, criar
+            console.log('Criando tabela gastos_mensais...');
+            
+            // Usar SQL raw para criar a tabela
+            const { error: createError } = await supabase.rpc('exec_sql', {
+                sql: `
+                    CREATE TABLE gastos_mensais (
+                        id BIGSERIAL PRIMARY KEY,
+                        nome_produto TEXT NOT NULL,
+                        local_compra TEXT NOT NULL,
+                        valor_total DECIMAL(10,2) NOT NULL,
+                        data_compra DATE NOT NULL,
+                        cartao TEXT NOT NULL,
+                        num_parcelas INTEGER NOT NULL DEFAULT 1,
+                        dia_fatura INTEGER NOT NULL DEFAULT 10,
+                        primeira_parcela DATE,
+                        ultima_parcela DATE,
+                        valor_parcela DECIMAL(10,2),
+                        observacoes TEXT,
+                        status TEXT NOT NULL DEFAULT 'pendente',
+                        parcelas_pagas INTEGER DEFAULT 0,
+                        parcelas_restantes INTEGER,
+                        valor_em_aberto DECIMAL(10,2) DEFAULT 0,
+                        valor_pago DECIMAL(10,2) DEFAULT 0,
+                        ultima_fatura_paga DATE,
+                        data_cadastro TIMESTAMPTZ DEFAULT NOW(),
+                        data_atualizacao TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    
+                    CREATE INDEX idx_gastos_cartao ON gastos_mensais(cartao);
+                    CREATE INDEX idx_gastos_status ON gastos_mensais(status);
+                    CREATE INDEX idx_gastos_data_compra ON gastos_mensais(data_compra);
+                `
+            });
+
+            if (createError) {
+                console.error('Erro ao criar tabela:', createError);
+                return false;
+            }
+            
+            console.log('Tabela gastos_mensais criada com sucesso!');
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Erro ao verificar/criar tabela:', error);
+        return false;
+    }
+}
+
+// =============================================
 // ROTAS DO SISTEMA
 // =============================================
 
@@ -41,17 +105,19 @@ app.get('/api/wake-up', (req, res) => {
 // Verificar status do Supabase
 app.get('/api/supabase-status', async (req, res) => {
     try {
-        // Testar várias tabelas
+        // Garantir que a tabela existe
+        await garantirTabelaGastos();
+        
         const [clientesCheck, gastosCheck] = await Promise.all([
             supabase.from('clientes_iptv').select('count', { count: 'exact' }).limit(1),
-            supabase.from('gastos_mensais').select('count', { count: 'exact' }).limit(1).catch(() => ({ error: 'Tabela não existe' }))
+            supabase.from('gastos_mensais').select('count', { count: 'exact' }).limit(1)
         ]);
 
         res.status(200).json({
             status: "conectado",
             tabelas: {
                 clientes_iptv: clientesCheck.error ? "erro" : "ok",
-                gastos_mensais: gastosCheck.error ? "não existe ou erro" : "ok"
+                gastos_mensais: gastosCheck.error ? "erro" : "ok"
             },
             timestamp: new Date().toISOString()
         });
@@ -65,8 +131,22 @@ app.get('/api/supabase-status', async (req, res) => {
 });
 
 // =============================================
-// ROTAS DE GASTOS MENSAL - ATUALIZADAS
+// ROTAS DE GASTOS MENSAL - SIMPLIFICADAS
 // =============================================
+
+// Garantir tabela antes de todas as rotas de gastos
+app.use('/api/gastos*', async (req, res, next) => {
+    try {
+        await garantirTabelaGastos();
+        next();
+    } catch (error) {
+        console.error('Erro ao garantir tabela:', error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor - tabela não disponível",
+            details: error.message 
+        });
+    }
+});
 
 // Salvar gasto mensal (compra)
 app.post('/api/gastos', async (req, res) => {
@@ -104,8 +184,8 @@ app.post('/api/gastos', async (req, res) => {
             cartao,
             num_parcelas: parseInt(num_parcelas) || 1,
             dia_fatura: parseInt(dia_fatura) || 10,
-            primeira_parcela,
-            ultima_parcela,
+            primeira_parcela: primeira_parcela || data_compra,
+            ultima_parcela: ultima_parcela || data_compra,
             valor_parcela: parseFloat(valor_parcela) || (parseFloat(valor_total) / parseInt(num_parcelas) || 0),
             observacoes: observacoes || null,
             status: status || 'pendente',
@@ -113,7 +193,6 @@ app.post('/api/gastos', async (req, res) => {
             parcelas_restantes: status === 'pago' ? 0 : parseInt(num_parcelas) || 1,
             valor_em_aberto: valorEmAberto,
             valor_pago: status === 'pago' ? parseFloat(valor_total) || 0 : 0,
-            data_cadastro: new Date().toISOString(),
             data_atualizacao: new Date().toISOString()
         };
 
@@ -158,28 +237,12 @@ app.get('/api/gastos', async (req, res) => {
             query = query.eq('status', status);
         }
 
-        if (mes) {
-            // Filtrar por mês da data da compra
-            const anoFiltro = ano || new Date().getFullYear();
-            const mesFiltro = mes.padStart(2, '0');
-            const proximoMes = parseInt(mes) + 1 === 13 ? '01' : (parseInt(mes) + 1).toString().padStart(2, '0');
-            const proximoAno = parseInt(mes) + 1 === 13 ? parseInt(anoFiltro) + 1 : anoFiltro;
-            
-            query = query.gte('data_compra', `${anoFiltro}-${mesFiltro}-01`)
-                        .lt('data_compra', `${proximoAno}-${proximoMes}-01`);
-        }
-
-        if (ano && !mes) {
-            // Filtrar por ano se não houver mês específico
-            query = query.gte('data_compra', `${ano}-01-01`)
-                        .lt('data_compra', `${parseInt(ano) + 1}-01-01`);
-        }
-
         const { data, error } = await query;
 
         if (error) throw error;
 
         res.status(200).json(data || []);
+
     } catch (error) {
         console.error('❌ Erro ao buscar compras:', error);
         res.status(500).json({ error: error.message });
@@ -247,7 +310,7 @@ app.put('/api/gastos/:id', async (req, res) => {
     }
 });
 
-// Marcar gasto como pago
+// Marcar gasto como pago (todas as parcelas)
 app.put('/api/gastos/:id/pagar', async (req, res) => {
     try {
         const { id } = req.params;
@@ -299,17 +362,13 @@ app.put('/api/gastos/:id/pagar', async (req, res) => {
     }
 });
 
-// Marcar parcela como paga - SISTEMA NOVO DE FATURAS
+// Pagar uma parcela específica
 app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
     try {
         const { id } = req.params;
         const { mes_fatura, ano_fatura } = req.body;
 
         console.log(`💰 Pagando fatura do mês ${mes_fatura}/${ano_fatura} para compra ID: ${id}`);
-
-        if (!mes_fatura || !ano_fatura) {
-            return res.status(400).json({ error: "Mês e ano da fatura são obrigatórios" });
-        }
 
         // Buscar a compra atual
         const { data: compra, error: fetchError } = await supabase
@@ -329,35 +388,30 @@ app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
             return res.status(400).json({ error: "Esta compra já está totalmente paga" });
         }
 
-        // Calcular faturas pendentes
         const numParcelas = compra.num_parcelas || 1;
         const parcelasPagas = compra.parcelas_pagas || 0;
         const valorParcela = compra.valor_parcela || (compra.valor_total / numParcelas);
         
-        // Verificar se a fatura do mês atual está pendente
-        const hoje = new Date();
-        const mesAtual = hoje.getMonth() + 1;
-        const anoAtual = hoje.getFullYear();
-        
-        // Se não foi especificado mês/ano, usar o atual
-        const mesFatura = mes_fatura || mesAtual;
-        const anoFatura = ano_fatura || anoAtual;
-        
-        // Verificar se esta fatura já foi paga
-        // Para simplificar, vamos considerar que cada parcela paga corresponde a um mês
-        const parcelaAPagar = parcelasPagas + 1;
-        
-        if (parcelaAPagar > numParcelas) {
-            return res.status(400).json({ error: "Todas as parcelas já foram pagas" });
-        }
-
-        // Atualizar valores
+        // Calcular nova fatura
         const novasParcelasPagas = parcelasPagas + 1;
-        const novasParcelasRestantes = numParcelas - novasParcelasPagas;
+        const novasParcelasRestantes = Math.max(0, numParcelas - novasParcelasPagas);
         const novoValorEmAberto = valorParcela * novasParcelasRestantes;
         const novoValorPago = valorParcela * novasParcelasPagas;
-        
         const novoStatus = novasParcelasRestantes === 0 ? 'pago' : 'pendente';
+
+        // Calcular data da próxima fatura
+        let proximoMes = mes_fatura;
+        let proximoAno = ano_fatura;
+        
+        if (novoStatus === 'pendente') {
+            proximoMes = parseInt(mes_fatura) + 1;
+            proximoAno = parseInt(ano_fatura);
+            
+            if (proximoMes > 12) {
+                proximoMes = 1;
+                proximoAno += 1;
+            }
+        }
 
         const updateData = {
             parcelas_pagas: novasParcelasPagas,
@@ -365,7 +419,7 @@ app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
             valor_em_aberto: novoValorEmAberto,
             valor_pago: novoValorPago,
             status: novoStatus,
-            ultima_fatura_paga: `${anoFatura}-${String(mesFatura).padStart(2, '0')}-01`,
+            ultima_fatura_paga: `${ano_fatura}-${String(mes_fatura).padStart(2, '0')}-01`,
             data_atualizacao: new Date().toISOString()
         };
 
@@ -377,36 +431,14 @@ app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
 
         if (error) throw error;
 
-        // Calcular próxima fatura
-        let proximaFatura = null;
-        if (novoStatus === 'pendente') {
-            // Calcular mês da próxima fatura
-            let proximoMes = mesFatura + 1;
-            let proximoAno = anoFatura;
-            
-            if (proximoMes > 12) {
-                proximoMes = 1;
-                proximoAno += 1;
-            }
-            
-            proximaFatura = {
+        res.status(200).json({ 
+            message: `✅ Fatura de ${mes_fatura}/${ano_fatura} paga com sucesso!`, 
+            data: data[0],
+            proxima_fatura: novoStatus === 'pendente' ? {
                 mes: proximoMes,
                 ano: proximoAno,
                 valor: valorParcela
-            };
-        }
-
-        res.status(200).json({ 
-            message: `✅ Fatura de ${mesFatura}/${anoFatura} paga com sucesso!`, 
-            data: data[0],
-            proxima_fatura: proximaFatura,
-            resumo: {
-                parcelas_pagas: novasParcelasPagas,
-                parcelas_restantes: novasParcelasRestantes,
-                valor_pago: novoValorPago,
-                valor_em_aberto: novoValorEmAberto,
-                status: novoStatus
-            }
+            } : null
         });
 
     } catch (error) {
@@ -418,7 +450,7 @@ app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
     }
 });
 
-// Obter faturas pendentes por cartão
+// Obter faturas pendentes por cartão - SIMPLIFICADO
 app.get('/api/gastos/faturas-pendentes', async (req, res) => {
     try {
         const { cartao } = req.query;
@@ -437,63 +469,65 @@ app.get('/api/gastos/faturas-pendentes', async (req, res) => {
 
         if (error) throw error;
 
-        // Agrupar faturas por mês e cartão
-        const faturasPorMes = {};
-        
-        data.forEach(gasto => {
-            // Calcular qual é a próxima fatura a vencer
-            const parcelasPagas = gasto.parcelas_pagas || 0;
-            const numParcelas = gasto.num_parcelas || 1;
-            
-            if (parcelasPagas >= numParcelas) return;
-            
-            // Calcular mês da próxima fatura
-            const dataCompra = new Date(gasto.data_compra);
-            const mesCompra = dataCompra.getMonth() + 1;
-            const anoCompra = dataCompra.getFullYear();
-            
-            // A próxima fatura é baseada na primeira parcela não paga
-            let mesFatura = mesCompra + parcelasPagas;
-            let anoFatura = anoCompra;
-            
-            // Ajustar se passar de dezembro
-            while (mesFatura > 12) {
-                mesFatura -= 12;
-                anoFatura += 1;
-            }
-            
-            const chave = `${anoFatura}-${String(mesFatura).padStart(2, '0')}`;
-            const chaveCartao = `${chave}-${gasto.cartao}`;
-            
-            if (!faturasPorMes[chaveCartao]) {
-                faturasPorMes[chaveCartao] = {
-                    mes: mesFatura,
-                    ano: anoFatura,
-                    cartao: gasto.cartao,
-                    compras: [],
-                    valor_total: 0
-                };
-            }
-            
-            faturasPorMes[chaveCartao].compras.push({
-                id: gasto.id,
-                nome_produto: gasto.nome_produto,
-                valor_parcela: gasto.valor_parcela || (gasto.valor_total / numParcelas)
-            });
-            
-            faturasPorMes[chaveCartao].valor_total += gasto.valor_parcela || (gasto.valor_total / numParcelas);
-        });
+        // Simplificar o agrupamento
+        const faturasPorCartaoMes = {};
+        const hoje = new Date();
+        const mesAtual = hoje.getMonth() + 1;
+        const anoAtual = hoje.getFullYear();
 
-        // Converter objeto para array
-        const faturasArray = Object.values(faturasPorMes);
+        if (data && data.length > 0) {
+            data.forEach(gasto => {
+                const cartao = gasto.cartao;
+                const parcelasPagas = gasto.parcelas_pagas || 0;
+                const numParcelas = gasto.num_parcelas || 1;
+                
+                if (parcelasPagas >= numParcelas) return;
+                
+                // Calcular mês da próxima fatura
+                const dataCompra = new Date(gasto.data_compra);
+                let mesFatura = dataCompra.getMonth() + 1 + parcelasPagas;
+                let anoFatura = dataCompra.getFullYear();
+                
+                // Ajustar se passar de dezembro
+                while (mesFatura > 12) {
+                    mesFatura -= 12;
+                    anoFatura += 1;
+                }
+                
+                const chave = `${cartao}-${anoFatura}-${String(mesFatura).padStart(2, '0')}`;
+                
+                if (!faturasPorCartaoMes[chave]) {
+                    faturasPorCartaoMes[chave] = {
+                        cartao: cartao,
+                        mes: mesFatura,
+                        ano: anoFatura,
+                        valor_total: 0,
+                        compras: []
+                    };
+                }
+                
+                const valorParcela = gasto.valor_parcela || (gasto.valor_total / numParcelas);
+                faturasPorCartaoMes[chave].valor_total += valorParcela;
+                faturasPorCartaoMes[chave].compras.push({
+                    id: gasto.id,
+                    nome_produto: gasto.nome_produto,
+                    valor_parcela: valorParcela
+                });
+            });
+        }
+
+        // Converter para array
+        const faturasArray = Object.values(faturasPorCartaoMes);
         
-        // Ordenar por ano e mês
+        // Ordenar por cartão, ano e mês
         faturasArray.sort((a, b) => {
+            if (a.cartao !== b.cartao) return a.cartao.localeCompare(b.cartao);
             if (a.ano !== b.ano) return a.ano - b.ano;
             return a.mes - b.mes;
         });
 
         res.status(200).json(faturasArray);
+
     } catch (error) {
         console.error('❌ Erro ao buscar faturas pendentes:', error);
         res.status(500).json({ error: error.message });
@@ -511,7 +545,7 @@ app.put('/api/gastos/pagar-fatura-cartao', async (req, res) => {
             return res.status(400).json({ error: "Cartão, mês e ano são obrigatórios" });
         }
 
-        // Buscar todas as compras pendentes deste cartão
+        // Buscar compras pendentes deste cartão
         const { data: compras, error: fetchError } = await supabase
             .from('gastos_mensais')
             .select('*')
@@ -525,17 +559,16 @@ app.put('/api/gastos/pagar-fatura-cartao', async (req, res) => {
         }
 
         let totalPago = 0;
-        let comprasAtualizadas = [];
-        let proximaFatura = null;
+        const comprasAtualizadas = [];
 
-        // Para cada compra, pagar a próxima parcela se corresponder ao mês
+        // Processar cada compra
         for (const compra of compras) {
             const numParcelas = compra.num_parcelas || 1;
             const parcelasPagas = compra.parcelas_pagas || 0;
             
             if (parcelasPagas >= numParcelas) continue;
             
-            // Calcular mês da próxima fatura desta compra
+            // Calcular mês da próxima fatura
             const dataCompra = new Date(compra.data_compra);
             let mesProximaFatura = dataCompra.getMonth() + 1 + parcelasPagas;
             let anoProximaFatura = dataCompra.getFullYear();
@@ -546,11 +579,11 @@ app.put('/api/gastos/pagar-fatura-cartao', async (req, res) => {
                 anoProximaFatura += 1;
             }
             
-            // Se a próxima fatura desta compra é a que estamos pagando
+            // Se a próxima fatura é a que estamos pagando
             if (mesProximaFatura === parseInt(mes) && anoProximaFatura === parseInt(ano)) {
                 const valorParcela = compra.valor_parcela || (compra.valor_total / numParcelas);
                 
-                // Atualizar esta compra
+                // Atualizar valores
                 const novasParcelasPagas = parcelasPagas + 1;
                 const novasParcelasRestantes = numParcelas - novasParcelasPagas;
                 const novoValorEmAberto = valorParcela * novasParcelasRestantes;
@@ -573,34 +606,13 @@ app.put('/api/gastos/pagar-fatura-cartao', async (req, res) => {
                     .eq('id', compra.id)
                     .select();
                 
-                if (updateError) throw updateError;
+                if (updateError) {
+                    console.error(`Erro ao atualizar compra ${compra.id}:`, updateError);
+                    continue;
+                }
                 
                 totalPago += valorParcela;
-                comprasAtualizadas.push({
-                    id: compra.id,
-                    nome_produto: compra.nome_produto,
-                    valor_parcela: valorParcela,
-                    status: novoStatus
-                });
-                
-                // Se ainda há parcelas, calcular próxima fatura
-                if (novoStatus === 'pendente') {
-                    let proximoMes = mes + 1;
-                    let proximoAno = ano;
-                    
-                    if (proximoMes > 12) {
-                        proximoMes = 1;
-                        proximoAno += 1;
-                    }
-                    
-                    if (!proximaFatura) {
-                        proximaFatura = {
-                            mes: proximoMes,
-                            ano: proximoAno,
-                            cartao: cartao
-                        };
-                    }
-                }
+                comprasAtualizadas.push(compra.id);
             }
         }
 
@@ -611,9 +623,8 @@ app.put('/api/gastos/pagar-fatura-cartao', async (req, res) => {
         res.status(200).json({ 
             message: `✅ Fatura de ${mes}/${ano} do cartão ${cartao} paga com sucesso!`,
             total_pago: totalPago,
-            quantidade_parcelas: comprasAtualizadas.length,
-            compras_atualizadas: comprasAtualizadas,
-            proxima_fatura: proximaFatura
+            quantidade_compras: comprasAtualizadas.length,
+            compras_atualizadas: comprasAtualizadas
         });
 
     } catch (error) {
@@ -652,7 +663,7 @@ app.delete('/api/gastos/:id', async (req, res) => {
     }
 });
 
-// Obter resumo por cartão
+// Obter resumo por cartão - SIMPLIFICADO
 app.get('/api/gastos/resumo/cartoes', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -662,83 +673,67 @@ app.get('/api/gastos/resumo/cartoes', async (req, res) => {
         if (error) throw error;
 
         const resumo = {};
+        const todosCartoes = [
+            "Banco Pan", "Atacadão", "Nubank", "Santander", "Riachuello", 
+            "Le Bescuit", "C&A", "Renner", "Mercado Livre", 
+            "Cartão Mais", "Mais", "Brasil Card", "Azul Atacarejo"
+        ];
 
-        // Processar todos os gastos para agrupar por cartão
-        data.forEach(gasto => {
-            const cartao = gasto.cartao;
-            if (!resumo[cartao]) {
-                resumo[cartao] = {
-                    total: 0,
-                    compras: 0,
-                    parcelas_pendentes: 0,
-                    valor_pendente: 0,
-                    valor_pago: 0,
-                    valor_aberto: 0,
-                    parcelas_pagas_total: 0,
-                    parcelas_total: 0,
-                    faturas_pendentes: []
-                };
-            }
+        // Inicializar todos os cartões
+        todosCartoes.forEach(cartao => {
+            resumo[cartao] = {
+                total: 0,
+                compras: 0,
+                parcelas_pendentes: 0,
+                valor_pendente: 0,
+                valor_pago: 0,
+                valor_aberto: 0,
+                parcelas_pagas_total: 0,
+                parcelas_total: 0
+            };
+        });
 
-            resumo[cartao].total += parseFloat(gasto.valor_total || 0);
-            resumo[cartao].compras += 1;
-            resumo[cartao].parcelas_total += parseInt(gasto.num_parcelas || 1);
-            resumo[cartao].parcelas_pagas_total += parseInt(gasto.parcelas_pagas || 0);
-
-            if (gasto.status === 'pendente') {
-                const valorEmAberto = parseFloat(gasto.valor_em_aberto || 0) || 
-                                   (parseFloat(gasto.valor_parcela || 0) * parseFloat(gasto.parcelas_restantes || 0));
-                resumo[cartao].valor_pendente += valorEmAberto;
-                resumo[cartao].valor_aberto += valorEmAberto;
-                resumo[cartao].parcelas_pendentes += parseInt(gasto.parcelas_restantes || 0);
-                resumo[cartao].valor_pago += parseFloat(gasto.valor_pago || 0);
-                
-                // Adicionar às faturas pendentes
-                const dataCompra = new Date(gasto.data_compra);
-                const parcelasPagas = gasto.parcelas_pagas || 0;
-                let mesFatura = dataCompra.getMonth() + 1 + parcelasPagas;
-                let anoFatura = dataCompra.getFullYear();
-                
-                // Ajustar se passar de dezembro
-                while (mesFatura > 12) {
-                    mesFatura -= 12;
-                    anoFatura += 1;
-                }
-                
-                const valorParcela = gasto.valor_parcela || (gasto.valor_total / (gasto.num_parcelas || 1));
-                
-                // Adicionar à lista de faturas pendentes
-                const chaveFatura = `${anoFatura}-${String(mesFatura).padStart(2, '0')}`;
-                let faturaExistente = resumo[cartao].faturas_pendentes.find(f => f.chave === chaveFatura);
-                
-                if (!faturaExistente) {
-                    faturaExistente = {
-                        chave: chaveFatura,
-                        mes: mesFatura,
-                        ano: anoFatura,
-                        valor_total: 0,
-                        quantidade: 0
+        // Processar os gastos
+        if (data && data.length > 0) {
+            data.forEach(gasto => {
+                const cartao = gasto.cartao;
+                if (!resumo[cartao]) {
+                    resumo[cartao] = {
+                        total: 0,
+                        compras: 0,
+                        parcelas_pendentes: 0,
+                        valor_pendente: 0,
+                        valor_pago: 0,
+                        valor_aberto: 0,
+                        parcelas_pagas_total: 0,
+                        parcelas_total: 0
                     };
-                    resumo[cartao].faturas_pendentes.push(faturaExistente);
                 }
-                
-                faturaExistente.valor_total += valorParcela;
-                faturaExistente.quantidade += 1;
-                
-            } else {
-                resumo[cartao].valor_pago += parseFloat(gasto.valor_total || 0);
-            }
-        });
 
-        // Ordenar faturas pendentes por data
-        Object.keys(resumo).forEach(cartao => {
-            resumo[cartao].faturas_pendentes.sort((a, b) => {
-                if (a.ano !== b.ano) return a.ano - b.ano;
-                return a.mes - b.mes;
+                const valorTotal = parseFloat(gasto.valor_total || 0);
+                const numParcelas = parseInt(gasto.num_parcelas || 1);
+                const parcelasPagas = parseInt(gasto.parcelas_pagas || 0);
+                const valorEmAberto = parseFloat(gasto.valor_em_aberto || 0);
+                const valorPago = parseFloat(gasto.valor_pago || 0);
+
+                resumo[cartao].total += valorTotal;
+                resumo[cartao].compras += 1;
+                resumo[cartao].parcelas_total += numParcelas;
+                resumo[cartao].parcelas_pagas_total += parcelasPagas;
+
+                if (gasto.status === 'pendente') {
+                    resumo[cartao].valor_pendente += valorEmAberto;
+                    resumo[cartao].valor_aberto += valorEmAberto;
+                    resumo[cartao].parcelas_pendentes += (numParcelas - parcelasPagas);
+                    resumo[cartao].valor_pago += valorPago;
+                } else {
+                    resumo[cartao].valor_pago += valorTotal;
+                }
             });
-        });
+        }
 
         res.status(200).json(resumo);
+
     } catch (error) {
         console.error('❌ Erro ao buscar resumo por cartão:', error);
         res.status(500).json({ error: error.message });
@@ -761,71 +756,52 @@ app.get('/api/gastos/resumo/geral', async (req, res) => {
             total_compras: 0,
             compras_pendentes: 0,
             compras_pagas: 0,
-            faturas_pendentes_mes_atual: 0,
-            valor_faturas_mes_atual: 0,
             por_cartao: {}
         };
 
-        // Processar todos os gastos
-        data.forEach(gasto => {
-            resumo.total_gasto += parseFloat(gasto.valor_total || 0);
-            resumo.total_compras += 1;
+        if (data && data.length > 0) {
+            data.forEach(gasto => {
+                const valorTotal = parseFloat(gasto.valor_total || 0);
+                const valorEmAberto = parseFloat(gasto.valor_em_aberto || 0);
+                const valorPago = parseFloat(gasto.valor_pago || 0);
 
-            if (gasto.status === 'pendente') {
-                resumo.total_aberto += parseFloat(gasto.valor_em_aberto || 0);
-                resumo.compras_pendentes += 1;
-                resumo.total_pago += parseFloat(gasto.valor_pago || 0);
-                
-                // Verificar se tem fatura para o mês atual
-                const hoje = new Date();
-                const mesAtual = hoje.getMonth() + 1;
-                const anoAtual = hoje.getFullYear();
-                
-                const dataCompra = new Date(gasto.data_compra);
-                const parcelasPagas = gasto.parcelas_pagas || 0;
-                let mesProximaFatura = dataCompra.getMonth() + 1 + parcelasPagas;
-                let anoProximaFatura = dataCompra.getFullYear();
-                
-                // Ajustar se passar de dezembro
-                while (mesProximaFatura > 12) {
-                    mesProximaFatura -= 12;
-                    anoProximaFatura += 1;
+                resumo.total_gasto += valorTotal;
+                resumo.total_compras += 1;
+
+                if (gasto.status === 'pendente') {
+                    resumo.total_aberto += valorEmAberto;
+                    resumo.compras_pendentes += 1;
+                    resumo.total_pago += valorPago;
+                } else {
+                    resumo.total_pago += valorTotal;
+                    resumo.compras_pagas += 1;
+                }
+
+                // Agrupar por cartão
+                const cartao = gasto.cartao;
+                if (!resumo.por_cartao[cartao]) {
+                    resumo.por_cartao[cartao] = {
+                        total: 0,
+                        aberto: 0,
+                        pago: 0,
+                        compras: 0
+                    };
                 }
                 
-                if (mesProximaFatura === mesAtual && anoProximaFatura === anoAtual) {
-                    resumo.faturas_pendentes_mes_atual += 1;
-                    resumo.valor_faturas_mes_atual += gasto.valor_parcela || (gasto.valor_total / (gasto.num_parcelas || 1));
-                }
+                resumo.por_cartao[cartao].total += valorTotal;
+                resumo.por_cartao[cartao].compras += 1;
                 
-            } else {
-                resumo.total_pago += parseFloat(gasto.valor_total || 0);
-                resumo.compras_pagas += 1;
-            }
-
-            // Agrupar por cartão
-            const cartao = gasto.cartao;
-            if (!resumo.por_cartao[cartao]) {
-                resumo.por_cartao[cartao] = {
-                    total: 0,
-                    aberto: 0,
-                    pago: 0,
-                    compras: 0,
-                    faturas_pendentes: []
-                };
-            }
-            
-            resumo.por_cartao[cartao].total += parseFloat(gasto.valor_total || 0);
-            resumo.por_cartao[cartao].compras += 1;
-            
-            if (gasto.status === 'pendente') {
-                resumo.por_cartao[cartao].aberto += parseFloat(gasto.valor_em_aberto || 0);
-                resumo.por_cartao[cartao].pago += parseFloat(gasto.valor_pago || 0);
-            } else {
-                resumo.por_cartao[cartao].pago += parseFloat(gasto.valor_total || 0);
-            }
-        });
+                if (gasto.status === 'pendente') {
+                    resumo.por_cartao[cartao].aberto += valorEmAberto;
+                    resumo.por_cartao[cartao].pago += valorPago;
+                } else {
+                    resumo.por_cartao[cartao].pago += valorTotal;
+                }
+            });
+        }
 
         res.status(200).json(resumo);
+
     } catch (error) {
         console.error('❌ Erro ao buscar resumo geral:', error);
         res.status(500).json({ error: error.message });
@@ -997,66 +973,22 @@ app.delete('/api/clientes/:id', async (req, res) => {
 });
 
 // =============================================
-// ROTA PARA CRIAR TABELA DE GASTOS SE NÃO EXISTIR
+// ROTA PARA CRIAR TABELA DE GASTOS
 // =============================================
 
 app.get('/api/criar-tabela-gastos', async (req, res) => {
     try {
-        // Verificar se a tabela existe
-        const { error: checkError } = await supabase
-            .from('gastos_mensais')
-            .select('*')
-            .limit(1);
-
-        if (checkError && checkError.code === '42P01') {
-            // Tabela não existe, criar usando SQL via RPC
-            const { error: createError } = await supabase.rpc('exec_sql', {
-                sql: `
-                    CREATE TABLE IF NOT EXISTS gastos_mensais (
-                        id BIGSERIAL PRIMARY KEY,
-                        nome_produto TEXT NOT NULL,
-                        local_compra TEXT NOT NULL,
-                        valor_total DECIMAL(10,2) NOT NULL,
-                        data_compra DATE NOT NULL,
-                        cartao TEXT NOT NULL,
-                        num_parcelas INTEGER NOT NULL DEFAULT 1,
-                        dia_fatura INTEGER NOT NULL DEFAULT 10,
-                        primeira_parcela DATE,
-                        ultima_parcela DATE,
-                        valor_parcela DECIMAL(10,2),
-                        observacoes TEXT,
-                        status TEXT NOT NULL DEFAULT 'pendente',
-                        parcelas_pagas INTEGER DEFAULT 0,
-                        parcelas_restantes INTEGER,
-                        valor_em_aberto DECIMAL(10,2) DEFAULT 0,
-                        valor_pago DECIMAL(10,2) DEFAULT 0,
-                        ultima_fatura_paga DATE,
-                        data_cadastro TIMESTAMPTZ DEFAULT NOW(),
-                        data_atualizacao TIMESTAMPTZ DEFAULT NOW()
-                    );
-                    
-                    CREATE INDEX IF NOT EXISTS idx_gastos_cartao ON gastos_mensais(cartao);
-                    CREATE INDEX IF NOT EXISTS idx_gastos_status ON gastos_mensais(status);
-                    CREATE INDEX IF NOT EXISTS idx_gastos_data_compra ON gastos_mensais(data_compra);
-                `
+        const tabelaCriada = await garantirTabelaGastos();
+        
+        if (tabelaCriada) {
+            res.status(200).json({ 
+                message: "✅ Tabela 'gastos_mensais' verificada/criada com sucesso!" 
             });
-
-            if (createError) {
-                console.error('Erro ao criar tabela:', createError);
-                return res.status(500).json({ 
-                    error: "Erro ao criar tabela",
-                    details: createError.message 
-                });
-            }
-
-            return res.status(200).json({ 
-                message: "✅ Tabela 'gastos_mensais' criada com sucesso!" 
+        } else {
+            res.status(500).json({ 
+                error: "Erro ao criar/verificar tabela" 
             });
         }
-
-        res.status(200).json({ 
-            message: "✅ Tabela 'gastos_mensais' já existe!" 
-        });
     } catch (error) {
         console.error('❌ Erro ao verificar/criar tabela:', error);
         res.status(500).json({ 
@@ -1100,7 +1032,7 @@ app.get('/:page', (req, res) => {
 // INICIALIZAÇÃO DO SERVIDOR
 // =============================================
 
-app.listen(port, () => {
+app.listen(port, async () => {
     console.log(`
     ╔═══════════════════════════════════════════════════════════╗
     ║                                                           ║
@@ -1153,4 +1085,12 @@ app.listen(port, () => {
     ║           ✅ SERVIDOR PRONTO PARA REQUISIÇÕES           ║
     ╚═══════════════════════════════════════════════════════════╝
     `);
+    
+    // Garantir que a tabela existe ao iniciar
+    try {
+        await garantirTabelaGastos();
+        console.log('✅ Tabela de gastos verificada/criada com sucesso!');
+    } catch (error) {
+        console.error('❌ Erro ao verificar/criar tabela:', error);
+    }
 });
