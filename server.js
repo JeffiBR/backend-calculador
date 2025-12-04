@@ -42,16 +42,16 @@ app.get('/api/wake-up', (req, res) => {
 app.get('/api/supabase-status', async (req, res) => {
     try {
         // Testar várias tabelas
-        const [clientesCheck, renovacoesCheck] = await Promise.all([
+        const [clientesCheck, gastosCheck] = await Promise.all([
             supabase.from('clientes_iptv').select('count', { count: 'exact' }).limit(1),
-            supabase.from('renovacoes_iptv').select('count', { count: 'exact' }).limit(1).catch(() => ({ error: 'Tabela não existe' }))
+            supabase.from('gastos_mensais').select('count', { count: 'exact' }).limit(1).catch(() => ({ error: 'Tabela não existe' }))
         ]);
 
         res.status(200).json({
             status: "conectado",
             tabelas: {
                 clientes_iptv: clientesCheck.error ? "erro" : "ok",
-                renovacoes_iptv: renovacoesCheck.error ? "não existe ou erro" : "ok"
+                gastos_mensais: gastosCheck.error ? "não existe ou erro" : "ok"
             },
             timestamp: new Date().toISOString()
         });
@@ -61,6 +61,440 @@ app.get('/api/supabase-status', async (req, res) => {
             message: error.message,
             timestamp: new Date().toISOString()
         });
+    }
+});
+
+// =============================================
+// ROTAS DE GASTOS MENSAL - ATUALIZADAS
+// =============================================
+
+// Salvar gasto mensal (compra)
+app.post('/api/gastos', async (req, res) => {
+    try {
+        const {
+            nome_produto,
+            local_compra,
+            valor_total,
+            data_compra,
+            cartao,
+            num_parcelas,
+            dia_fatura,
+            primeira_parcela,
+            ultima_parcela,
+            valor_parcela,
+            observacoes,
+            status
+        } = req.body;
+
+        // Validação
+        if (!nome_produto || !local_compra || !valor_total || !data_compra || !cartao || !num_parcelas) {
+            return res.status(400).json({ 
+                error: "Dados obrigatórios faltando" 
+            });
+        }
+
+        // Calcular valor em aberto
+        const valorEmAberto = status === 'pago' ? 0 : parseFloat(valor_total) || 0;
+
+        const dadosParaInserir = {
+            nome_produto,
+            local_compra,
+            valor_total: parseFloat(valor_total) || 0,
+            data_compra,
+            cartao,
+            num_parcelas: parseInt(num_parcelas) || 1,
+            dia_fatura: parseInt(dia_fatura) || 10,
+            primeira_parcela,
+            ultima_parcela,
+            valor_parcela: parseFloat(valor_parcela) || (parseFloat(valor_total) / parseInt(num_parcelas) || 0),
+            observacoes: observacoes || null,
+            status: status || 'pendente',
+            parcelas_pagas: status === 'pago' ? parseInt(num_parcelas) || 1 : 0,
+            parcelas_restantes: status === 'pago' ? 0 : parseInt(num_parcelas) || 1,
+            valor_em_aberto: valorEmAberto,
+            data_cadastro: new Date().toISOString(),
+            data_atualizacao: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('gastos_mensais')
+            .insert([dadosParaInserir])
+            .select();
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: "✅ Compra salva com sucesso!", 
+            id: data[0]?.id,
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao salvar compra:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Listar todos os gastos com filtros
+app.get('/api/gastos', async (req, res) => {
+    try {
+        const { cartao, mes, ano, status } = req.query;
+        
+        let query = supabase
+            .from('gastos_mensais')
+            .select('*')
+            .order('data_compra', { ascending: false });
+
+        // Aplicar filtros se fornecidos
+        if (cartao && cartao !== 'todos') {
+            query = query.eq('cartao', cartao);
+        }
+
+        if (status && status !== 'todos') {
+            query = query.eq('status', status);
+        }
+
+        if (mes) {
+            // Filtrar por mês da data da compra
+            const anoFiltro = ano || new Date().getFullYear();
+            const mesFiltro = mes.padStart(2, '0');
+            const proximoMes = parseInt(mes) + 1 === 13 ? '01' : (parseInt(mes) + 1).toString().padStart(2, '0');
+            const proximoAno = parseInt(mes) + 1 === 13 ? parseInt(anoFiltro) + 1 : anoFiltro;
+            
+            query = query.gte('data_compra', `${anoFiltro}-${mesFiltro}-01`)
+                        .lt('data_compra', `${proximoAno}-${proximoMes}-01`);
+        }
+
+        if (ano && !mes) {
+            // Filtrar por ano se não houver mês específico
+            query = query.gte('data_compra', `${ano}-01-01`)
+                        .lt('data_compra', `${parseInt(ano) + 1}-01-01`);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        res.status(200).json(data || []);
+    } catch (error) {
+        console.error('❌ Erro ao buscar compras:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Buscar gasto por ID
+app.get('/api/gastos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data, error } = await supabase
+            .from('gastos_mensais')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: "Compra não encontrada" });
+        }
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('❌ Erro ao buscar compra:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Atualizar gasto
+app.put('/api/gastos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        console.log(`🔄 Atualizando compra ID: ${id}`);
+
+        // Adicionar data de atualização
+        updateData.data_atualizacao = new Date().toISOString();
+
+        const { data, error } = await supabase
+            .from('gastos_mensais')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: "Compra não encontrada" });
+        }
+
+        res.status(200).json({ 
+            message: "✅ Compra atualizada com sucesso!", 
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao atualizar compra:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Marcar gasto como pago
+app.put('/api/gastos/:id/pagar', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`💰 Marcando compra ID: ${id} como paga`);
+
+        // Buscar a compra atual
+        const { data: compra, error: fetchError } = await supabase
+            .from('gastos_mensais')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        if (!compra) {
+            return res.status(404).json({ error: "Compra não encontrada" });
+        }
+
+        // Preparar dados de atualização
+        const updateData = {
+            status: 'pago',
+            parcelas_pagas: compra.num_parcelas,
+            parcelas_restantes: 0,
+            valor_em_aberto: 0,
+            data_atualizacao: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('gastos_mensais')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: "✅ Compra marcada como paga com sucesso!", 
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao marcar compra como paga:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Marcar parcela como paga
+app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { parcela_num } = req.body;
+
+        console.log(`💰 Marcando parcela ${parcela_num} da compra ID: ${id}`);
+
+        if (!parcela_num) {
+            return res.status(400).json({ error: "Número da parcela é obrigatório" });
+        }
+
+        // Buscar a compra atual
+        const { data: compra, error: fetchError } = await supabase
+            .from('gastos_mensais')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        if (!compra) {
+            return res.status(404).json({ error: "Compra não encontrada" });
+        }
+
+        const numParcelas = compra.num_parcelas || 1;
+        const parcelaNum = parseInt(parcela_num);
+        
+        if (parcelaNum < 1 || parcelaNum > numParcelas) {
+            return res.status(400).json({ error: "Número da parcela inválido" });
+        }
+
+        // Calcular novo estado
+        const parcelasPagas = Math.max(compra.parcelas_pagas || 0, parcelaNum);
+        const parcelasRestantes = numParcelas - parcelasPagas;
+        const novoStatus = parcelasRestantes === 0 ? 'pago' : 'pendente';
+        const valorEmAberto = novoStatus === 'pago' ? 0 : (compra.valor_parcela || (compra.valor_total / numParcelas)) * parcelasRestantes;
+
+        const updateData = {
+            parcelas_pagas: parcelasPagas,
+            parcelas_restantes: parcelasRestantes,
+            status: novoStatus,
+            valor_em_aberto: valorEmAberto,
+            data_atualizacao: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('gastos_mensais')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: `✅ Parcela ${parcelaNum} marcada como paga com sucesso!`, 
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao marcar parcela como paga:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Excluir gasto
+app.delete('/api/gastos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`🗑️ Excluindo compra ID: ${id}`);
+
+        const { error } = await supabase
+            .from('gastos_mensais')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: "✅ Compra excluída com sucesso!" 
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao excluir compra:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Obter resumo por cartão
+app.get('/api/gastos/resumo/cartoes', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('gastos_mensais')
+            .select('*');
+
+        if (error) throw error;
+
+        const resumo = {};
+
+        // Processar todos os gastos para agrupar por cartão
+        data.forEach(gasto => {
+            const cartao = gasto.cartao;
+            if (!resumo[cartao]) {
+                resumo[cartao] = {
+                    total: 0,
+                    compras: 0,
+                    parcelas_pendentes: 0,
+                    valor_pendente: 0,
+                    valor_pago: 0,
+                    valor_aberto: 0
+                };
+            }
+
+            resumo[cartao].total += parseFloat(gasto.valor_total || 0);
+            resumo[cartao].compras += 1;
+
+            if (gasto.status === 'pendente') {
+                const valorEmAberto = parseFloat(gasto.valor_em_aberto || 0) || 
+                                   (parseFloat(gasto.valor_parcela || 0) * parseFloat(gasto.parcelas_restantes || 0));
+                resumo[cartao].valor_pendente += valorEmAberto;
+                resumo[cartao].valor_aberto += valorEmAberto;
+                resumo[cartao].parcelas_pendentes += parseInt(gasto.parcelas_restantes || 0);
+                resumo[cartao].valor_pago += parseFloat(gasto.valor_total || 0) - valorEmAberto;
+            } else {
+                resumo[cartao].valor_pago += parseFloat(gasto.valor_total || 0);
+            }
+        });
+
+        res.status(200).json(resumo);
+    } catch (error) {
+        console.error('❌ Erro ao buscar resumo por cartão:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obter resumo geral
+app.get('/api/gastos/resumo/geral', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('gastos_mensais')
+            .select('*');
+
+        if (error) throw error;
+
+        const resumo = {
+            total_gasto: 0,
+            total_aberto: 0,
+            total_pago: 0,
+            total_compras: 0,
+            compras_pendentes: 0,
+            compras_pagas: 0,
+            por_cartao: {}
+        };
+
+        // Processar todos os gastos
+        data.forEach(gasto => {
+            resumo.total_gasto += parseFloat(gasto.valor_total || 0);
+            resumo.total_compras += 1;
+
+            if (gasto.status === 'pendente') {
+                resumo.total_aberto += parseFloat(gasto.valor_em_aberto || 0);
+                resumo.compras_pendentes += 1;
+                resumo.total_pago += parseFloat(gasto.valor_total || 0) - parseFloat(gasto.valor_em_aberto || 0);
+            } else {
+                resumo.total_pago += parseFloat(gasto.valor_total || 0);
+                resumo.compras_pagas += 1;
+            }
+
+            // Agrupar por cartão
+            const cartao = gasto.cartao;
+            if (!resumo.por_cartao[cartao]) {
+                resumo.por_cartao[cartao] = {
+                    total: 0,
+                    aberto: 0,
+                    pago: 0
+                };
+            }
+            
+            resumo.por_cartao[cartao].total += parseFloat(gasto.valor_total || 0);
+            if (gasto.status === 'pendente') {
+                resumo.por_cartao[cartao].aberto += parseFloat(gasto.valor_em_aberto || 0);
+                resumo.por_cartao[cartao].pago += parseFloat(gasto.valor_total || 0) - parseFloat(gasto.valor_em_aberto || 0);
+            } else {
+                resumo.por_cartao[cartao].pago += parseFloat(gasto.valor_total || 0);
+            }
+        });
+
+        res.status(200).json(resumo);
+    } catch (error) {
+        console.error('❌ Erro ao buscar resumo geral:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -201,40 +635,6 @@ app.put('/api/clientes/:id', async (req, res) => {
     }
 });
 
-// Atualizar parcialmente cliente (PATCH)
-app.patch('/api/clientes/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-
-        console.log(`🔄 Atualizando parcialmente cliente ID: ${id}`, updateData);
-
-        const { data, error } = await supabase
-            .from('clientes_iptv')
-            .update(updateData)
-            .eq('id', id)
-            .select();
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            return res.status(404).json({ error: "Cliente não encontrado" });
-        }
-
-        res.status(200).json({ 
-            message: "✅ Cliente atualizado com sucesso!", 
-            data: data[0]
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao atualizar cliente:", error);
-        res.status(500).json({ 
-            error: "Erro interno do servidor",
-            details: error.message 
-        });
-    }
-});
-
 // Excluir cliente
 app.delete('/api/clientes/:id', async (req, res) => {
     try {
@@ -263,785 +663,68 @@ app.delete('/api/clientes/:id', async (req, res) => {
 });
 
 // =============================================
-// ROTAS DE GASTOS MENSAL - ATUALIZADAS
+// ROTA PARA CRIAR TABELA DE GASTOS SE NÃO EXISTIR
 // =============================================
 
-// Salvar gasto mensal (compra)
-app.post('/api/gastos', async (req, res) => {
+app.get('/api/criar-tabela-gastos', async (req, res) => {
     try {
-        const {
-            nome_produto,
-            local_compra,
-            valor_total,
-            data_compra,
-            cartao,
-            num_parcelas,
-            dia_fatura,
-            primeira_parcela,
-            ultima_parcela,
-            valor_parcela,
-            observacoes,
-            status,
-            parcelas_detalhes
-        } = req.body;
-
-        // Validação
-        if (!nome_produto || !local_compra || !valor_total || !data_compra || !cartao || !num_parcelas) {
-            return res.status(400).json({ 
-                error: "Dados obrigatórios faltando" 
-            });
-        }
-
-        // Determinar status baseado na última parcela
-        const hoje = new Date();
-        const dataUltimaParcela = new Date(ultima_parcela);
-        const statusFinal = hoje > dataUltimaParcela ? 'pago' : 'pendente';
-
-        const dadosParaInserir = {
-            nome_produto,
-            local_compra,
-            valor_total: parseFloat(valor_total) || 0,
-            data_compra,
-            cartao,
-            num_parcelas: parseInt(num_parcelas) || 1,
-            dia_fatura: parseInt(dia_fatura) || 10,
-            primeira_parcela,
-            ultima_parcela,
-            valor_parcela: parseFloat(valor_parcela) || 0,
-            observacoes: observacoes || null,
-            status: status || statusFinal,
-            parcelas_detalhes: parcelas_detalhes || [],
-            data_cadastro: new Date().toISOString()
-        };
-
-        const { data, error } = await supabase
-            .from('gastos_mensais')
-            .insert([dadosParaInserir])
-            .select();
-
-        if (error) throw error;
-
-        res.status(200).json({ 
-            message: "✅ Compra salva com sucesso!", 
-            id: data[0]?.id,
-            data: data[0]
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao salvar compra:", error);
-        res.status(500).json({ 
-            error: "Erro interno do servidor",
-            details: error.message 
-        });
-    }
-});
-
-// Listar todos os gastos com filtros
-app.get('/api/gastos', async (req, res) => {
-    try {
-        const { cartao, mes, ano } = req.query;
-        
-        let query = supabase
-            .from('gastos_mensais')
-            .select('*')
-            .order('data_compra', { ascending: false });
-
-        // Aplicar filtros se fornecidos
-        if (cartao) {
-            query = query.eq('cartao', cartao);
-        }
-
-        if (mes) {
-            // Filtrar por mês da data da compra
-            query = query.gte('data_compra', `${ano || new Date().getFullYear()}-${mes.padStart(2, '0')}-01`)
-                        .lt('data_compra', `${ano || new Date().getFullYear()}-${parseInt(mes) + 1 === 13 ? '01' : (parseInt(mes) + 1).toString().padStart(2, '0')}-01`);
-        }
-
-        if (ano && !mes) {
-            // Filtrar por ano se não houver mês específico
-            query = query.gte('data_compra', `${ano}-01-01`)
-                        .lt('data_compra', `${parseInt(ano) + 1}-01-01`);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        res.status(200).json(data || []);
-    } catch (error) {
-        console.error('❌ Erro ao buscar compras:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Buscar gasto por ID
-app.get('/api/gastos/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const { data, error } = await supabase
-            .from('gastos_mensais')
-            .select('*')
-            .eq('id', id)
-            .single();
-
-        if (error) throw error;
-
-        if (!data) {
-            return res.status(404).json({ error: "Compra não encontrada" });
-        }
-
-        res.status(200).json(data);
-    } catch (error) {
-        console.error('❌ Erro ao buscar compra:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Atualizar gasto
-app.put('/api/gastos/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-
-        console.log(`🔄 Atualizando compra ID: ${id}`);
-
-        // Recalcular status se a última parcela foi atualizada
-        if (updateData.ultima_parcela) {
-            const hoje = new Date();
-            const dataUltimaParcela = new Date(updateData.ultima_parcela);
-            updateData.status = hoje > dataUltimaParcela ? 'pago' : 'pendente';
-        }
-
-        const { data, error } = await supabase
-            .from('gastos_mensais')
-            .update(updateData)
-            .eq('id', id)
-            .select();
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            return res.status(404).json({ error: "Compra não encontrada" });
-        }
-
-        res.status(200).json({ 
-            message: "✅ Compra atualizada com sucesso!", 
-            data: data[0]
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao atualizar compra:", error);
-        res.status(500).json({ 
-            error: "Erro interno do servidor",
-            details: error.message 
-        });
-    }
-});
-
-// Excluir gasto
-app.delete('/api/gastos/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        console.log(`🗑️ Excluindo compra ID: ${id}`);
-
-        const { error } = await supabase
-            .from('gastos_mensais')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-
-        res.status(200).json({ 
-            message: "✅ Compra excluída com sucesso!" 
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao excluir compra:", error);
-        res.status(500).json({ 
-            error: "Erro interno do servidor",
-            details: error.message 
-        });
-    }
-});
-
-// Obter resumo por cartão
-app.get('/api/gastos/resumo/cartoes', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('gastos_mensais')
-            .select('*');
-
-        if (error) throw error;
-
-        const resumo = {};
-        const hoje = new Date();
-
-        // Processar todos os gastos para agrupar por cartão
-        data.forEach(gasto => {
-            const cartao = gasto.cartao;
-            if (!resumo[cartao]) {
-                resumo[cartao] = {
-                    total_gasto: 0,
-                    compras: 0,
-                    parcelas_ativas: 0,
-                    compras_pendentes: 0
-                };
-            }
-
-            resumo[cartao].total_gasto += parseFloat(gasto.valor_total || 0);
-            resumo[cartao].compras += 1;
-
-            // Verificar se há parcelas ativas
-            const ultimaParcela = new Date(gasto.ultima_parcela);
-            if (hoje <= ultimaParcela) {
-                resumo[cartao].parcelas_ativas += parseInt(gasto.num_parcelas || 0);
-                resumo[cartao].compras_pendentes += 1;
-            }
-        });
-
-        res.status(200).json(resumo);
-    } catch (error) {
-        console.error('❌ Erro ao buscar resumo por cartão:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Obter faturas por mês/ano
-app.get('/api/gastos/faturas/:ano/:mes', async (req, res) => {
-    try {
-        const { ano, mes } = req.params;
-
-        const { data, error } = await supabase
-            .from('gastos_mensais')
-            .select('*');
-
-        if (error) throw error;
-
-        const faturasPorCartao = {};
-        const mesInt = parseInt(mes);
-        const anoInt = parseInt(ano);
-
-        // Processar todos os gastos para encontrar parcelas no mês/ano especificado
-        data.forEach(gasto => {
-            if (!gasto.parcelas_detalhes || !Array.isArray(gasto.parcelas_detalhes)) return;
-
-            gasto.parcelas_detalhes.forEach(parcela => {
-                const dataParcela = new Date(parcela.data);
-                if (dataParcela.getMonth() + 1 === mesInt && dataParcela.getFullYear() === anoInt) {
-                    const cartao = gasto.cartao;
-                    if (!faturasPorCartao[cartao]) {
-                        faturasPorCartao[cartao] = {
-                            total: 0,
-                            parcelas: []
-                        };
-                    }
-
-                    faturasPorCartao[cartao].total += parseFloat(parcela.valor || 0);
-                    faturasPorCartao[cartao].parcelas.push({
-                        produto: gasto.nome_produto,
-                        valor: parcela.valor,
-                        data: dataParcela.toISOString(),
-                        numero: parcela.numero
-                    });
-                }
-            });
-        });
-
-        res.status(200).json({
-            mes: mesInt,
-            ano: anoInt,
-            faturas: faturasPorCartao,
-            total_geral: Object.values(faturasPorCartao).reduce((sum, fatura) => sum + fatura.total, 0)
-        });
-    } catch (error) {
-        console.error('❌ Erro ao buscar faturas:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Obter todas as faturas futuras
-app.get('/api/gastos/faturas/futuras', async (req, res) => {
-    try {
-        const hoje = new Date();
-        const mesAtual = hoje.getMonth() + 1;
-        const anoAtual = hoje.getFullYear();
-
-        const { data, error } = await supabase
-            .from('gastos_mensais')
-            .select('*');
-
-        if (error) throw error;
-
-        const faturasFuturas = {};
-
-        // Processar para os próximos 12 meses
-        for (let i = 0; i < 12; i++) {
-            let mes = mesAtual + i;
-            let ano = anoAtual;
-            
-            if (mes > 12) {
-                mes -= 12;
-                ano += 1;
-            }
-
-            faturasFuturas[`${mes}/${ano}`] = {};
-        }
-
-        // Processar todas as parcelas futuras
-        data.forEach(gasto => {
-            if (!gasto.parcelas_detalhes || !Array.isArray(gasto.parcelas_detalhes)) return;
-
-            gasto.parcelas_detalhes.forEach(parcela => {
-                const dataParcela = new Date(parcela.data);
-                if (dataParcela >= hoje) {
-                    const mesParcela = dataParcela.getMonth() + 1;
-                    const anoParcela = dataParcela.getFullYear();
-                    const key = `${mesParcela}/${anoParcela}`;
-
-                    if (faturasFuturas[key]) {
-                        const cartao = gasto.cartao;
-                        if (!faturasFuturas[key][cartao]) {
-                            faturasFuturas[key][cartao] = 0;
-                        }
-                        faturasFuturas[key][cartao] += parseFloat(parcela.valor || 0);
-                    }
-                }
-            });
-        });
-
-        res.status(200).json(faturasFuturas);
-    } catch (error) {
-        console.error('❌ Erro ao buscar faturas futuras:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =============================================
-// ROTAS DE RENOVAÇÕES
-// =============================================
-
-// Registrar renovação
-app.post('/api/renovacoes', async (req, res) => {
-    try {
-        console.log('📝 Recebendo requisição para registrar renovação...');
-        
-        const {
-            cliente_id,
-            cliente_nome,
-            cliente_telefone,
-            tipo_cliente,
-            plano_anterior,
-            plano_novo,
-            valor_renovacao,
-            data_vencimento_anterior,
-            data_vencimento_novo,
-            revendedor,
-            servidor
-        } = req.body;
-
-        console.log('Dados da renovação:', {
-            cliente_id,
-            cliente_nome,
-            plano_novo,
-            valor_renovacao
-        });
-
-        // Validação
-        if (!cliente_id || !cliente_nome || !plano_novo || !valor_renovacao) {
-            return res.status(400).json({ 
-                error: "Dados obrigatórios faltando" 
-            });
-        }
-
         // Verificar se a tabela existe
-        try {
-            const { error: tableCheckError } = await supabase
-                .from('renovacoes_iptv')
-                .select('*')
-                .limit(1);
+        const { error: checkError } = await supabase
+            .from('gastos_mensais')
+            .select('*')
+            .limit(1);
 
-            if (tableCheckError && tableCheckError.code === '42P01') {
-                console.log('⚠️ Tabela renovacoes_iptv não existe, criando...');
-                
-                // Tentar criar a tabela via SQL
-                const { error: createError } = await supabase.rpc('exec_sql', {
-                    sql: `
-                        CREATE TABLE IF NOT EXISTS renovacoes_iptv (
-                            id BIGSERIAL PRIMARY KEY,
-                            cliente_id BIGINT NOT NULL,
-                            cliente_nome TEXT NOT NULL,
-                            cliente_telefone TEXT,
-                            tipo_cliente TEXT,
-                            plano_anterior TEXT,
-                            plano_novo TEXT NOT NULL,
-                            valor_renovacao DECIMAL(10,2) NOT NULL,
-                            data_renovacao TIMESTAMPTZ DEFAULT NOW(),
-                            data_vencimento_anterior DATE,
-                            data_vencimento_novo DATE,
-                            revendedor TEXT,
-                            servidor TEXT,
-                            created_at TIMESTAMPTZ DEFAULT NOW()
-                        );
-                    `
-                });
+        if (checkError && checkError.code === '42P01') {
+            // Tabela não existe, criar usando SQL via RPC
+            const { error: createError } = await supabase.rpc('exec_sql', {
+                sql: `
+                    CREATE TABLE IF NOT EXISTS gastos_mensais (
+                        id BIGSERIAL PRIMARY KEY,
+                        nome_produto TEXT NOT NULL,
+                        local_compra TEXT NOT NULL,
+                        valor_total DECIMAL(10,2) NOT NULL,
+                        data_compra DATE NOT NULL,
+                        cartao TEXT NOT NULL,
+                        num_parcelas INTEGER NOT NULL DEFAULT 1,
+                        dia_fatura INTEGER NOT NULL DEFAULT 10,
+                        primeira_parcela DATE,
+                        ultima_parcela DATE,
+                        valor_parcela DECIMAL(10,2),
+                        observacoes TEXT,
+                        status TEXT NOT NULL DEFAULT 'pendente',
+                        parcelas_pagas INTEGER DEFAULT 0,
+                        parcelas_restantes INTEGER,
+                        valor_em_aberto DECIMAL(10,2) DEFAULT 0,
+                        data_cadastro TIMESTAMPTZ DEFAULT NOW(),
+                        data_atualizacao TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    
+                    CREATE INDEX IF NOT EXISTS idx_gastos_cartao ON gastos_mensais(cartao);
+                    CREATE INDEX IF NOT EXISTS idx_gastos_status ON gastos_mensais(status);
+                    CREATE INDEX IF NOT EXISTS idx_gastos_data_compra ON gastos_mensais(data_compra);
+                `
+            });
 
-                if (createError) {
-                    console.error('❌ Erro ao criar tabela:', createError);
-                }
-            }
-        } catch (tableError) {
-            console.warn('⚠️ Não foi possível verificar/criar tabela:', tableError.message);
-        }
-
-        const dadosParaInserir = {
-            cliente_id,
-            cliente_nome,
-            cliente_telefone: cliente_telefone || null,
-            tipo_cliente: tipo_cliente || null,
-            plano_anterior: plano_anterior || null,
-            plano_novo,
-            valor_renovacao: parseFloat(valor_renovacao) || 0,
-            data_vencimento_anterior: data_vencimento_anterior || null,
-            data_vencimento_novo: data_vencimento_novo || null,
-            revendedor: revendedor || null,
-            servidor: servidor || null,
-            data_renovacao: new Date().toISOString()
-        };
-
-        console.log('📤 Inserindo renovação...');
-
-        // Tentar inserir na tabela
-        const { data, error } = await supabase
-            .from('renovacoes_iptv')
-            .insert([dadosParaInserir])
-            .select();
-
-        if (error) {
-            console.error('❌ Erro ao registrar renovação:', error);
-            
-            // Se a tabela não existe, retornar sucesso sem registrar
-            if (error.code === '42P01') {
-                console.log('⚠️ Tabela não existe, mas continuando processo...');
-                return res.status(200).json({ 
-                    message: "✅ Renovação realizada (histórico não registrado - tabela não existe)", 
-                    warning: "Tabela de histórico não encontrada"
+            if (createError) {
+                console.error('Erro ao criar tabela:', createError);
+                return res.status(500).json({ 
+                    error: "Erro ao criar tabela",
+                    details: createError.message 
                 });
             }
-            
-            throw error;
-        }
 
-        console.log('✅ Renovação registrada! ID:', data[0]?.id);
-
-        res.status(200).json({ 
-            message: "✅ Renovação registrada com sucesso!", 
-            id: data[0]?.id,
-            data: data[0]
-        });
-
-    } catch (error) {
-        console.error("❌ Erro completo ao registrar renovação:", error);
-        res.status(500).json({ 
-            error: "Erro interno do servidor",
-            details: error.message,
-            code: error.code
-        });
-    }
-});
-
-// Listar todas as renovações
-app.get('/api/renovacoes', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('renovacoes_iptv')
-            .select('*')
-            .order('data_renovacao', { ascending: false });
-
-        if (error) {
-            // Se a tabela não existe, retornar array vazio
-            if (error.code === '42P01') {
-                return res.status(200).json([]);
-            }
-            throw error;
-        }
-
-        res.status(200).json(data || []);
-    } catch (error) {
-        console.error('❌ Erro ao buscar renovações:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Buscar renovações por cliente
-app.get('/api/renovacoes/cliente/:cliente_id', async (req, res) => {
-    try {
-        const { cliente_id } = req.params;
-
-        const { data, error } = await supabase
-            .from('renovacoes_iptv')
-            .select('*')
-            .eq('cliente_id', cliente_id)
-            .order('data_renovacao', { ascending: false });
-
-        if (error) {
-            if (error.code === '42P01') {
-                return res.status(200).json([]);
-            }
-            throw error;
-        }
-
-        res.status(200).json(data || []);
-    } catch (error) {
-        console.error('❌ Erro ao buscar renovações do cliente:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =============================================
-// ROTAS DE PRODUTOS
-// =============================================
-
-app.post('/api/products', upload.single('produtoFoto'), async (req, res) => {
-    try {
-        if (!req.body.data) {
-            return res.status(400).json({ error: "Dados do produto não fornecidos" });
-        }
-
-        const dados = JSON.parse(req.body.data);
-        const file = req.file;
-        let publicUrl = null;
-
-        if (file) {
-            const fileName = `foto_${Date.now()}_${file.originalname.replace(/\s/g, '_')}`;
-            
-            const { data: uploadData, error: uploadError } = await supabase
-                .storage
-                .from('produtos')
-                .upload(fileName, file.buffer, {
-                    contentType: file.mimetype
-                });
-
-            if (uploadError) throw uploadError;
-
-            const { data: urlData } = supabase
-                .storage
-                .from('produtos')
-                .getPublicUrl(fileName);
-            
-            publicUrl = urlData.publicUrl;
-        }
-
-        const dadosParaInserir = {
-            nome_produto: dados.nome_produto,
-            imagem_url: publicUrl,
-            tipo_tecido: dados.tecido_tipo,
-            valor_total_tecido: dados.valor_total_tecido,
-            comprimento_total_tecido: dados.comprimento_total_tecido,
-            largura_tecido: dados.largura_tecido,
-            metragem_utilizada: dados.metragem_utilizada,
-            custo_tecido: dados.custo_unitario_tecido,
-            custo_mao_obra: dados.custo_unitario_mo,
-            custo_embalagem: dados.custo_unitario_embalagem,
-            custo_transporte: dados.custo_unitario_transporte,
-            custo_aviamentos: dados.custo_unitario_aviamentos,
-            porcentagem_lucro: dados.porcentagem_lucro,
-            valor_lucro: dados.lucro_unitario,
-            preco_venda_final: dados.preco_venda_unitario,
-            quantidade_lote: dados.quantidade_produtos,
-            valor_total_lote: dados.preco_venda_unitario * dados.quantidade_produtos,
-            custo_materiais: dados.custo_unitario_tecido + dados.custo_unitario_aviamentos,
-            custo_producao_total: dados.custo_unitario_tecido + dados.custo_unitario_aviamentos + 
-                                 dados.custo_unitario_mo + dados.custo_unitario_embalagem + 
-                                 dados.custo_unitario_transporte,
-            detalhes_aviamentos: dados.aviamentos_data || []
-        };
-
-        const { data, error } = await supabase
-            .from('products')
-            .insert([dadosParaInserir])
-            .select();
-
-        if (error) throw error;
-
-        res.status(200).json({ 
-            message: "✅ Produto salvo com sucesso!", 
-            id: data[0]?.id,
-            data: data[0]
-        });
-
-    } catch (error) {
-        console.error("❌ Erro ao salvar produto:", error);
-        res.status(500).json({ 
-            error: "Erro interno do servidor",
-            details: error.message 
-        });
-    }
-});
-
-app.get('/api/products', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        res.status(200).json(data);
-    } catch (error) {
-        console.error('❌ Erro ao buscar produtos:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =============================================
-// ROTAS DE INVESTIMENTOS
-// =============================================
-
-app.post('/api/investments', async (req, res) => {
-    try {
-        const {
-            data_compra,
-            fornecedor,
-            forma_pagamento,
-            numero_parcelas,
-            data_primeira_parcela,
-            observacoes,
-            itens,
-            valor_total
-        } = req.body;
-
-        if (!data_compra || !forma_pagamento || !itens || itens.length === 0) {
-            return res.status(400).json({ 
-                error: "Dados obrigatórios faltando" 
+            return res.status(200).json({ 
+                message: "✅ Tabela 'gastos_mensais' criada com sucesso!" 
             });
         }
 
-        const dadosParaInserir = {
-            data_compra,
-            fornecedor: fornecedor || null,
-            forma_pagamento,
-            numero_parcelas: numero_parcelas || 1,
-            data_primeira_parcela: data_primeira_parcela || null,
-            observacoes: observacoes || null,
-            itens,
-            valor_total: parseFloat(valor_total) || 0
-        };
-
-        const { data, error } = await supabase
-            .from('investments')
-            .insert([dadosParaInserir])
-            .select();
-
-        if (error) throw error;
-
         res.status(200).json({ 
-            message: "✅ Investimento salvo com sucesso!", 
-            id: data[0]?.id,
-            data: data[0]
+            message: "✅ Tabela 'gastos_mensais' já existe!" 
         });
-
     } catch (error) {
-        console.error("❌ Erro ao salvar investimento:", error);
+        console.error('❌ Erro ao verificar/criar tabela:', error);
         res.status(500).json({ 
             error: "Erro interno do servidor",
-            details: error.message 
-        });
-    }
-});
-
-app.get('/api/investments', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('investments')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        res.status(200).json(data);
-    } catch (error) {
-        console.error('❌ Erro ao buscar investimentos:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =============================================
-// ROTA DE BACKUP
-// =============================================
-
-app.get('/api/backup/clientes', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('clientes_iptv')
-            .select('*');
-
-        if (error) throw error;
-
-        // Formatar para download
-        const backupData = {
-            timestamp: new Date().toISOString(),
-            total_clientes: data.length,
-            clientes: data
-        };
-
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${Date.now()}.json"`);
-        
-        res.status(200).json(backupData);
-    } catch (error) {
-        console.error('❌ Erro ao gerar backup:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =============================================
-// ROTA PARA VERIFICAR ESTRUTURA DA TABELA
-// =============================================
-
-app.get('/api/tabela-estrutura/:nome', async (req, res) => {
-    try {
-        const { nome } = req.params;
-        
-        // Esta query requer permissões especiais no Supabase
-        // Alternativa: usar uma função SQL pré-configurada
-        const { data, error } = await supabase.rpc('get_table_structure', {
-            table_name: nome
-        }).catch(async () => {
-            // Se a função não existir, tentar consulta direta
-            const { data: altData, error: altError } = await supabase
-                .from(nome)
-                .select('*')
-                .limit(1);
-            
-            if (altError) throw altError;
-            
-            // Extrair estrutura do primeiro registro
-            if (altData && altData.length > 0) {
-                return { 
-                    data: Object.keys(altData[0]).map(key => ({
-                        column_name: key,
-                        data_type: typeof altData[0][key]
-                    }))
-                };
-            }
-            
-            return { data: [] };
-        });
-
-        if (error) throw error;
-
-        res.status(200).json({
-            tabela: nome,
-            estrutura: data,
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error('❌ Erro ao buscar estrutura:', error);
-        res.status(500).json({ 
-            error: "Erro ao buscar estrutura da tabela",
             details: error.message 
         });
     }
@@ -1060,7 +743,8 @@ app.get('/:page', (req, res) => {
     const page = req.params.page;
     const validPages = [
         'index.html', 'dashboard.html', 'calculator.html', 'clientes.html',
-        'clientesrenovacao.html', 'investimentos.html', 'products.html'
+        'clientesrenovacao.html', 'investimentos.html', 'products.html',
+        'gastos_mensais.html'
     ];
     
     if (validPages.includes(page)) {
@@ -1084,7 +768,7 @@ app.listen(port, () => {
     console.log(`
     ╔═══════════════════════════════════════════════════════════╗
     ║                                                           ║
-    ║   🚀 SERVIDOR IPTV MANAGER INICIADO COM SUCESSO!         ║
+    ║   🚀 SERVIDOR INICIADO COM SUCESSO!                      ║
     ║                                                           ║
     ║   📍 URL: http://localhost:${port}                       ║
     ║   📅 Data: ${new Date().toLocaleString('pt-BR')}         ║
@@ -1097,36 +781,31 @@ app.listen(port, () => {
     🔧 SISTEMA:
     - GET  /api/wake-up              - Healthcheck do servidor
     - GET  /api/supabase-status      - Status da conexão Supabase
-    - GET  /api/backup/clientes      - Backup dos clientes
+    - GET  /api/criar-tabela-gastos  - Criar tabela de gastos
+    
+    💳 GASTOS MENSAL:
+    - POST /api/gastos               - Salvar compra
+    - GET  /api/gastos               - Listar compras
+    - GET  /api/gastos/:id           - Obter compra específica
+    - PUT  /api/gastos/:id           - Atualizar compra
+    - PUT  /api/gastos/:id/pagar     - Marcar como pago
+    - PUT  /api/gastos/:id/pagar-parcela - Marcar parcela como paga
+    - DELETE /api/gastos/:id         - Excluir compra
+    - GET  /api/gastos/resumo/cartoes - Resumo por cartão
+    - GET  /api/gastos/resumo/geral  - Resumo geral
     
     👥 CLIENTES IPTV:
     - POST /api/clientes             - Salvar cliente
     - GET  /api/clientes             - Listar clientes
     - GET  /api/clientes/:id         - Obter cliente específico
     - PUT  /api/clientes/:id         - Atualizar cliente
-    - PATCH /api/clientes/:id        - Atualizar parcialmente
     - DELETE /api/clientes/:id       - Excluir cliente
-    
-    🔄 RENOVAÇÕES:
-    - POST /api/renovacoes           - Registrar renovação
-    - GET  /api/renovacoes           - Listar renovações
-    - GET  /api/renovacoes/cliente/:id - Renovações por cliente
-    
-    📦 PRODUTOS:
-    - POST /api/products             - Salvar produto
-    - GET  /api/products             - Listar produtos
-    
-    💰 INVESTIMENTOS:
-    - POST /api/investments          - Salvar investimento
-    - GET  /api/investments          - Listar investimentos
-    
-    📊 DIAGNÓSTICO:
-    - GET  /api/tabela-estrutura/:nome - Ver estrutura da tabela
     
     🌐 PÁGINAS HTML:
     - GET  /                         - Página inicial
     - GET  /dashboard.html           - Dashboard
     - GET  /calculator.html          - Calculadora
+    - GET  /gastos_mensais.html      - Gastos Mensais
     - GET  /clientes.html            - Registrar cliente
     - GET  /clientesrenovacao.html   - Renovação de clientes
     - GET  /investimentos.html       - Investimentos
@@ -1137,4 +816,3 @@ app.listen(port, () => {
     ╚═══════════════════════════════════════════════════════════╝
     `);
 });
-
