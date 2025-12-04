@@ -112,6 +112,7 @@ app.post('/api/gastos', async (req, res) => {
             parcelas_pagas: status === 'pago' ? parseInt(num_parcelas) || 1 : 0,
             parcelas_restantes: status === 'pago' ? 0 : parseInt(num_parcelas) || 1,
             valor_em_aberto: valorEmAberto,
+            valor_pago: status === 'pago' ? parseFloat(valor_total) || 0 : 0,
             data_cadastro: new Date().toISOString(),
             data_atualizacao: new Date().toISOString()
         };
@@ -272,6 +273,7 @@ app.put('/api/gastos/:id/pagar', async (req, res) => {
             parcelas_pagas: compra.num_parcelas,
             parcelas_restantes: 0,
             valor_em_aberto: 0,
+            valor_pago: compra.valor_total,
             data_atualizacao: new Date().toISOString()
         };
 
@@ -297,16 +299,16 @@ app.put('/api/gastos/:id/pagar', async (req, res) => {
     }
 });
 
-// Marcar parcela como paga
+// Marcar parcela como paga - SISTEMA NOVO DE FATURAS
 app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
     try {
         const { id } = req.params;
-        const { parcela_num } = req.body;
+        const { mes_fatura, ano_fatura } = req.body;
 
-        console.log(`💰 Marcando parcela ${parcela_num} da compra ID: ${id}`);
+        console.log(`💰 Pagando fatura do mês ${mes_fatura}/${ano_fatura} para compra ID: ${id}`);
 
-        if (!parcela_num) {
-            return res.status(400).json({ error: "Número da parcela é obrigatório" });
+        if (!mes_fatura || !ano_fatura) {
+            return res.status(400).json({ error: "Mês e ano da fatura são obrigatórios" });
         }
 
         // Buscar a compra atual
@@ -322,24 +324,48 @@ app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
             return res.status(404).json({ error: "Compra não encontrada" });
         }
 
-        const numParcelas = compra.num_parcelas || 1;
-        const parcelaNum = parseInt(parcela_num);
-        
-        if (parcelaNum < 1 || parcelaNum > numParcelas) {
-            return res.status(400).json({ error: "Número da parcela inválido" });
+        // Verificar se há faturas em aberto
+        if (compra.status === 'pago') {
+            return res.status(400).json({ error: "Esta compra já está totalmente paga" });
         }
 
-        // Calcular novo estado
-        const parcelasPagas = Math.max(compra.parcelas_pagas || 0, parcelaNum);
-        const parcelasRestantes = numParcelas - parcelasPagas;
-        const novoStatus = parcelasRestantes === 0 ? 'pago' : 'pendente';
-        const valorEmAberto = novoStatus === 'pago' ? 0 : (compra.valor_parcela || (compra.valor_total / numParcelas)) * parcelasRestantes;
+        // Calcular faturas pendentes
+        const numParcelas = compra.num_parcelas || 1;
+        const parcelasPagas = compra.parcelas_pagas || 0;
+        const valorParcela = compra.valor_parcela || (compra.valor_total / numParcelas);
+        
+        // Verificar se a fatura do mês atual está pendente
+        const hoje = new Date();
+        const mesAtual = hoje.getMonth() + 1;
+        const anoAtual = hoje.getFullYear();
+        
+        // Se não foi especificado mês/ano, usar o atual
+        const mesFatura = mes_fatura || mesAtual;
+        const anoFatura = ano_fatura || anoAtual;
+        
+        // Verificar se esta fatura já foi paga
+        // Para simplificar, vamos considerar que cada parcela paga corresponde a um mês
+        const parcelaAPagar = parcelasPagas + 1;
+        
+        if (parcelaAPagar > numParcelas) {
+            return res.status(400).json({ error: "Todas as parcelas já foram pagas" });
+        }
+
+        // Atualizar valores
+        const novasParcelasPagas = parcelasPagas + 1;
+        const novasParcelasRestantes = numParcelas - novasParcelasPagas;
+        const novoValorEmAberto = valorParcela * novasParcelasRestantes;
+        const novoValorPago = valorParcela * novasParcelasPagas;
+        
+        const novoStatus = novasParcelasRestantes === 0 ? 'pago' : 'pendente';
 
         const updateData = {
-            parcelas_pagas: parcelasPagas,
-            parcelas_restantes: parcelasRestantes,
+            parcelas_pagas: novasParcelasPagas,
+            parcelas_restantes: novasParcelasRestantes,
+            valor_em_aberto: novoValorEmAberto,
+            valor_pago: novoValorPago,
             status: novoStatus,
-            valor_em_aberto: valorEmAberto,
+            ultima_fatura_paga: `${anoFatura}-${String(mesFatura).padStart(2, '0')}-01`,
             data_atualizacao: new Date().toISOString()
         };
 
@@ -351,13 +377,247 @@ app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
 
         if (error) throw error;
 
+        // Calcular próxima fatura
+        let proximaFatura = null;
+        if (novoStatus === 'pendente') {
+            // Calcular mês da próxima fatura
+            let proximoMes = mesFatura + 1;
+            let proximoAno = anoFatura;
+            
+            if (proximoMes > 12) {
+                proximoMes = 1;
+                proximoAno += 1;
+            }
+            
+            proximaFatura = {
+                mes: proximoMes,
+                ano: proximoAno,
+                valor: valorParcela
+            };
+        }
+
         res.status(200).json({ 
-            message: `✅ Parcela ${parcelaNum} marcada como paga com sucesso!`, 
-            data: data[0]
+            message: `✅ Fatura de ${mesFatura}/${anoFatura} paga com sucesso!`, 
+            data: data[0],
+            proxima_fatura: proximaFatura,
+            resumo: {
+                parcelas_pagas: novasParcelasPagas,
+                parcelas_restantes: novasParcelasRestantes,
+                valor_pago: novoValorPago,
+                valor_em_aberto: novoValorEmAberto,
+                status: novoStatus
+            }
         });
 
     } catch (error) {
-        console.error("❌ Erro ao marcar parcela como paga:", error);
+        console.error("❌ Erro ao pagar fatura:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Obter faturas pendentes por cartão
+app.get('/api/gastos/faturas-pendentes', async (req, res) => {
+    try {
+        const { cartao } = req.query;
+        
+        let query = supabase
+            .from('gastos_mensais')
+            .select('*')
+            .eq('status', 'pendente')
+            .order('data_compra', { ascending: true });
+
+        if (cartao) {
+            query = query.eq('cartao', cartao);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        // Agrupar faturas por mês e cartão
+        const faturasPorMes = {};
+        
+        data.forEach(gasto => {
+            // Calcular qual é a próxima fatura a vencer
+            const parcelasPagas = gasto.parcelas_pagas || 0;
+            const numParcelas = gasto.num_parcelas || 1;
+            
+            if (parcelasPagas >= numParcelas) return;
+            
+            // Calcular mês da próxima fatura
+            const dataCompra = new Date(gasto.data_compra);
+            const mesCompra = dataCompra.getMonth() + 1;
+            const anoCompra = dataCompra.getFullYear();
+            
+            // A próxima fatura é baseada na primeira parcela não paga
+            let mesFatura = mesCompra + parcelasPagas;
+            let anoFatura = anoCompra;
+            
+            // Ajustar se passar de dezembro
+            while (mesFatura > 12) {
+                mesFatura -= 12;
+                anoFatura += 1;
+            }
+            
+            const chave = `${anoFatura}-${String(mesFatura).padStart(2, '0')}`;
+            const chaveCartao = `${chave}-${gasto.cartao}`;
+            
+            if (!faturasPorMes[chaveCartao]) {
+                faturasPorMes[chaveCartao] = {
+                    mes: mesFatura,
+                    ano: anoFatura,
+                    cartao: gasto.cartao,
+                    compras: [],
+                    valor_total: 0
+                };
+            }
+            
+            faturasPorMes[chaveCartao].compras.push({
+                id: gasto.id,
+                nome_produto: gasto.nome_produto,
+                valor_parcela: gasto.valor_parcela || (gasto.valor_total / numParcelas)
+            });
+            
+            faturasPorMes[chaveCartao].valor_total += gasto.valor_parcela || (gasto.valor_total / numParcelas);
+        });
+
+        // Converter objeto para array
+        const faturasArray = Object.values(faturasPorMes);
+        
+        // Ordenar por ano e mês
+        faturasArray.sort((a, b) => {
+            if (a.ano !== b.ano) return a.ano - b.ano;
+            return a.mes - b.mes;
+        });
+
+        res.status(200).json(faturasArray);
+    } catch (error) {
+        console.error('❌ Erro ao buscar faturas pendentes:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Pagar fatura completa de um cartão
+app.put('/api/gastos/pagar-fatura-cartao', async (req, res) => {
+    try {
+        const { cartao, mes, ano } = req.body;
+
+        console.log(`💰 Pagando fatura completa do cartão ${cartao} - ${mes}/${ano}`);
+
+        if (!cartao || !mes || !ano) {
+            return res.status(400).json({ error: "Cartão, mês e ano são obrigatórios" });
+        }
+
+        // Buscar todas as compras pendentes deste cartão
+        const { data: compras, error: fetchError } = await supabase
+            .from('gastos_mensais')
+            .select('*')
+            .eq('cartao', cartao)
+            .eq('status', 'pendente');
+
+        if (fetchError) throw fetchError;
+
+        if (!compras || compras.length === 0) {
+            return res.status(404).json({ error: "Nenhuma compra pendente encontrada para este cartão" });
+        }
+
+        let totalPago = 0;
+        let comprasAtualizadas = [];
+        let proximaFatura = null;
+
+        // Para cada compra, pagar a próxima parcela se corresponder ao mês
+        for (const compra of compras) {
+            const numParcelas = compra.num_parcelas || 1;
+            const parcelasPagas = compra.parcelas_pagas || 0;
+            
+            if (parcelasPagas >= numParcelas) continue;
+            
+            // Calcular mês da próxima fatura desta compra
+            const dataCompra = new Date(compra.data_compra);
+            let mesProximaFatura = dataCompra.getMonth() + 1 + parcelasPagas;
+            let anoProximaFatura = dataCompra.getFullYear();
+            
+            // Ajustar se passar de dezembro
+            while (mesProximaFatura > 12) {
+                mesProximaFatura -= 12;
+                anoProximaFatura += 1;
+            }
+            
+            // Se a próxima fatura desta compra é a que estamos pagando
+            if (mesProximaFatura === parseInt(mes) && anoProximaFatura === parseInt(ano)) {
+                const valorParcela = compra.valor_parcela || (compra.valor_total / numParcelas);
+                
+                // Atualizar esta compra
+                const novasParcelasPagas = parcelasPagas + 1;
+                const novasParcelasRestantes = numParcelas - novasParcelasPagas;
+                const novoValorEmAberto = valorParcela * novasParcelasRestantes;
+                const novoValorPago = valorParcela * novasParcelasPagas;
+                const novoStatus = novasParcelasRestantes === 0 ? 'pago' : 'pendente';
+                
+                const updateData = {
+                    parcelas_pagas: novasParcelasPagas,
+                    parcelas_restantes: novasParcelasRestantes,
+                    valor_em_aberto: novoValorEmAberto,
+                    valor_pago: novoValorPago,
+                    status: novoStatus,
+                    ultima_fatura_paga: `${ano}-${String(mes).padStart(2, '0')}-01`,
+                    data_atualizacao: new Date().toISOString()
+                };
+                
+                const { data: updatedData, error: updateError } = await supabase
+                    .from('gastos_mensais')
+                    .update(updateData)
+                    .eq('id', compra.id)
+                    .select();
+                
+                if (updateError) throw updateError;
+                
+                totalPago += valorParcela;
+                comprasAtualizadas.push({
+                    id: compra.id,
+                    nome_produto: compra.nome_produto,
+                    valor_parcela: valorParcela,
+                    status: novoStatus
+                });
+                
+                // Se ainda há parcelas, calcular próxima fatura
+                if (novoStatus === 'pendente') {
+                    let proximoMes = mes + 1;
+                    let proximoAno = ano;
+                    
+                    if (proximoMes > 12) {
+                        proximoMes = 1;
+                        proximoAno += 1;
+                    }
+                    
+                    if (!proximaFatura) {
+                        proximaFatura = {
+                            mes: proximoMes,
+                            ano: proximoAno,
+                            cartao: cartao
+                        };
+                    }
+                }
+            }
+        }
+
+        if (comprasAtualizadas.length === 0) {
+            return res.status(400).json({ error: `Nenhuma fatura encontrada para ${cartao} em ${mes}/${ano}` });
+        }
+
+        res.status(200).json({ 
+            message: `✅ Fatura de ${mes}/${ano} do cartão ${cartao} paga com sucesso!`,
+            total_pago: totalPago,
+            quantidade_parcelas: comprasAtualizadas.length,
+            compras_atualizadas: comprasAtualizadas,
+            proxima_fatura: proximaFatura
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao pagar fatura do cartão:", error);
         res.status(500).json({ 
             error: "Erro interno do servidor",
             details: error.message 
@@ -413,12 +673,17 @@ app.get('/api/gastos/resumo/cartoes', async (req, res) => {
                     parcelas_pendentes: 0,
                     valor_pendente: 0,
                     valor_pago: 0,
-                    valor_aberto: 0
+                    valor_aberto: 0,
+                    parcelas_pagas_total: 0,
+                    parcelas_total: 0,
+                    faturas_pendentes: []
                 };
             }
 
             resumo[cartao].total += parseFloat(gasto.valor_total || 0);
             resumo[cartao].compras += 1;
+            resumo[cartao].parcelas_total += parseInt(gasto.num_parcelas || 1);
+            resumo[cartao].parcelas_pagas_total += parseInt(gasto.parcelas_pagas || 0);
 
             if (gasto.status === 'pendente') {
                 const valorEmAberto = parseFloat(gasto.valor_em_aberto || 0) || 
@@ -426,10 +691,51 @@ app.get('/api/gastos/resumo/cartoes', async (req, res) => {
                 resumo[cartao].valor_pendente += valorEmAberto;
                 resumo[cartao].valor_aberto += valorEmAberto;
                 resumo[cartao].parcelas_pendentes += parseInt(gasto.parcelas_restantes || 0);
-                resumo[cartao].valor_pago += parseFloat(gasto.valor_total || 0) - valorEmAberto;
+                resumo[cartao].valor_pago += parseFloat(gasto.valor_pago || 0);
+                
+                // Adicionar às faturas pendentes
+                const dataCompra = new Date(gasto.data_compra);
+                const parcelasPagas = gasto.parcelas_pagas || 0;
+                let mesFatura = dataCompra.getMonth() + 1 + parcelasPagas;
+                let anoFatura = dataCompra.getFullYear();
+                
+                // Ajustar se passar de dezembro
+                while (mesFatura > 12) {
+                    mesFatura -= 12;
+                    anoFatura += 1;
+                }
+                
+                const valorParcela = gasto.valor_parcela || (gasto.valor_total / (gasto.num_parcelas || 1));
+                
+                // Adicionar à lista de faturas pendentes
+                const chaveFatura = `${anoFatura}-${String(mesFatura).padStart(2, '0')}`;
+                let faturaExistente = resumo[cartao].faturas_pendentes.find(f => f.chave === chaveFatura);
+                
+                if (!faturaExistente) {
+                    faturaExistente = {
+                        chave: chaveFatura,
+                        mes: mesFatura,
+                        ano: anoFatura,
+                        valor_total: 0,
+                        quantidade: 0
+                    };
+                    resumo[cartao].faturas_pendentes.push(faturaExistente);
+                }
+                
+                faturaExistente.valor_total += valorParcela;
+                faturaExistente.quantidade += 1;
+                
             } else {
                 resumo[cartao].valor_pago += parseFloat(gasto.valor_total || 0);
             }
+        });
+
+        // Ordenar faturas pendentes por data
+        Object.keys(resumo).forEach(cartao => {
+            resumo[cartao].faturas_pendentes.sort((a, b) => {
+                if (a.ano !== b.ano) return a.ano - b.ano;
+                return a.mes - b.mes;
+            });
         });
 
         res.status(200).json(resumo);
@@ -455,6 +761,8 @@ app.get('/api/gastos/resumo/geral', async (req, res) => {
             total_compras: 0,
             compras_pendentes: 0,
             compras_pagas: 0,
+            faturas_pendentes_mes_atual: 0,
+            valor_faturas_mes_atual: 0,
             por_cartao: {}
         };
 
@@ -466,7 +774,29 @@ app.get('/api/gastos/resumo/geral', async (req, res) => {
             if (gasto.status === 'pendente') {
                 resumo.total_aberto += parseFloat(gasto.valor_em_aberto || 0);
                 resumo.compras_pendentes += 1;
-                resumo.total_pago += parseFloat(gasto.valor_total || 0) - parseFloat(gasto.valor_em_aberto || 0);
+                resumo.total_pago += parseFloat(gasto.valor_pago || 0);
+                
+                // Verificar se tem fatura para o mês atual
+                const hoje = new Date();
+                const mesAtual = hoje.getMonth() + 1;
+                const anoAtual = hoje.getFullYear();
+                
+                const dataCompra = new Date(gasto.data_compra);
+                const parcelasPagas = gasto.parcelas_pagas || 0;
+                let mesProximaFatura = dataCompra.getMonth() + 1 + parcelasPagas;
+                let anoProximaFatura = dataCompra.getFullYear();
+                
+                // Ajustar se passar de dezembro
+                while (mesProximaFatura > 12) {
+                    mesProximaFatura -= 12;
+                    anoProximaFatura += 1;
+                }
+                
+                if (mesProximaFatura === mesAtual && anoProximaFatura === anoAtual) {
+                    resumo.faturas_pendentes_mes_atual += 1;
+                    resumo.valor_faturas_mes_atual += gasto.valor_parcela || (gasto.valor_total / (gasto.num_parcelas || 1));
+                }
+                
             } else {
                 resumo.total_pago += parseFloat(gasto.valor_total || 0);
                 resumo.compras_pagas += 1;
@@ -478,14 +808,18 @@ app.get('/api/gastos/resumo/geral', async (req, res) => {
                 resumo.por_cartao[cartao] = {
                     total: 0,
                     aberto: 0,
-                    pago: 0
+                    pago: 0,
+                    compras: 0,
+                    faturas_pendentes: []
                 };
             }
             
             resumo.por_cartao[cartao].total += parseFloat(gasto.valor_total || 0);
+            resumo.por_cartao[cartao].compras += 1;
+            
             if (gasto.status === 'pendente') {
                 resumo.por_cartao[cartao].aberto += parseFloat(gasto.valor_em_aberto || 0);
-                resumo.por_cartao[cartao].pago += parseFloat(gasto.valor_total || 0) - parseFloat(gasto.valor_em_aberto || 0);
+                resumo.por_cartao[cartao].pago += parseFloat(gasto.valor_pago || 0);
             } else {
                 resumo.por_cartao[cartao].pago += parseFloat(gasto.valor_total || 0);
             }
@@ -695,6 +1029,8 @@ app.get('/api/criar-tabela-gastos', async (req, res) => {
                         parcelas_pagas INTEGER DEFAULT 0,
                         parcelas_restantes INTEGER,
                         valor_em_aberto DECIMAL(10,2) DEFAULT 0,
+                        valor_pago DECIMAL(10,2) DEFAULT 0,
+                        ultima_fatura_paga DATE,
                         data_cadastro TIMESTAMPTZ DEFAULT NOW(),
                         data_atualizacao TIMESTAMPTZ DEFAULT NOW()
                     );
@@ -789,7 +1125,9 @@ app.listen(port, () => {
     - GET  /api/gastos/:id           - Obter compra específica
     - PUT  /api/gastos/:id           - Atualizar compra
     - PUT  /api/gastos/:id/pagar     - Marcar como pago
-    - PUT  /api/gastos/:id/pagar-parcela - Marcar parcela como paga
+    - PUT  /api/gastos/:id/pagar-parcela - Pagar fatura específica
+    - PUT  /api/gastos/pagar-fatura-cartao - Pagar fatura completa do cartão
+    - GET  /api/gastos/faturas-pendentes - Listar faturas pendentes
     - DELETE /api/gastos/:id         - Excluir compra
     - GET  /api/gastos/resumo/cartoes - Resumo por cartão
     - GET  /api/gastos/resumo/geral  - Resumo geral
