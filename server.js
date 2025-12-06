@@ -17,18 +17,35 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
-// Configuração do Multer
+// Configuração do Multer para uploads genéricos
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
+// Configuração do Multer para upload de produtos (imagens)
+const storageProdutos = multer.memoryStorage();
+const uploadProduto = multer({ 
+  storage: storageProdutos,
+  limits: { 
+    fileSize: 5 * 1024 * 1024, // 5MB
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas imagens são permitidas'), false);
+    }
+  }
 });
 
 // =============================================
 // FUNÇÕES AUXILIARES
 // =============================================
 
-// Função para garantir que a tabela existe com todas as colunas
+// Função para garantir que a tabela gastos existe
 async function garantirTabelaGastos() {
     try {
         // Verificar se a tabela existe
@@ -88,6 +105,64 @@ async function garantirTabelaGastos() {
     }
 }
 
+// Função para garantir que a tabela produtos existe
+async function garantirTabelaProdutos() {
+    try {
+        // Verificar se a tabela existe
+        const { error: checkError } = await supabase
+            .from('produtos_calculadora')
+            .select('id')
+            .limit(1);
+
+        if (checkError && checkError.code === '42P01') {
+            // Tabela não existe, criar
+            console.log('Criando tabela produtos_calculadora...');
+            
+            const { error: createError } = await supabase.rpc('exec_sql', {
+                sql: `
+                    CREATE TABLE produtos_calculadora (
+                        id BIGSERIAL PRIMARY KEY,
+                        nome_produto TEXT NOT NULL,
+                        quantidade_produtos INTEGER NOT NULL DEFAULT 1,
+                        tecido_tipo TEXT NOT NULL,
+                        valor_total_tecido DECIMAL(10,2) NOT NULL,
+                        comprimento_total_tecido DECIMAL(10,2) NOT NULL,
+                        largura_tecido DECIMAL(10,2) NOT NULL,
+                        metragem_utilizada DECIMAL(10,2) NOT NULL,
+                        custo_unitario_tecido DECIMAL(10,2) NOT NULL,
+                        custo_unitario_aviamentos DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        custo_unitario_mo DECIMAL(10,2) NOT NULL,
+                        custo_unitario_embalagem DECIMAL(10,2) NOT NULL,
+                        custo_unitario_transporte DECIMAL(10,2) NOT NULL,
+                        porcentagem_lucro DECIMAL(10,2) NOT NULL,
+                        lucro_unitario DECIMAL(10,2) NOT NULL,
+                        preco_venda_unitario DECIMAL(10,2) NOT NULL,
+                        aviamentos_data JSONB,
+                        foto_url TEXT,
+                        data_cadastro TIMESTAMPTZ DEFAULT NOW(),
+                        data_atualizacao TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    
+                    CREATE INDEX idx_produtos_nome ON produtos_calculadora(nome_produto);
+                    CREATE INDEX idx_produtos_data ON produtos_calculadora(data_cadastro);
+                `
+            });
+
+            if (createError) {
+                console.error('Erro ao criar tabela produtos_calculadora:', createError);
+                return false;
+            }
+            
+            console.log('Tabela produtos_calculadora criada com sucesso!');
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Erro ao verificar/criar tabela produtos_calculadora:', error);
+        return false;
+    }
+}
+
 // =============================================
 // ROTAS DO SISTEMA
 // =============================================
@@ -105,19 +180,22 @@ app.get('/api/wake-up', (req, res) => {
 // Verificar status do Supabase
 app.get('/api/supabase-status', async (req, res) => {
     try {
-        // Garantir que a tabela existe
+        // Garantir que as tabelas existem
         await garantirTabelaGastos();
+        await garantirTabelaProdutos();
         
-        const [clientesCheck, gastosCheck] = await Promise.all([
+        const [clientesCheck, gastosCheck, produtosCheck] = await Promise.all([
             supabase.from('clientes_iptv').select('count', { count: 'exact' }).limit(1),
-            supabase.from('gastos_mensais').select('count', { count: 'exact' }).limit(1)
+            supabase.from('gastos_mensais').select('count', { count: 'exact' }).limit(1),
+            supabase.from('produtos_calculadora').select('count', { count: 'exact' }).limit(1)
         ]);
 
         res.status(200).json({
             status: "conectado",
             tabelas: {
                 clientes_iptv: clientesCheck.error ? "erro" : "ok",
-                gastos_mensais: gastosCheck.error ? "erro" : "ok"
+                gastos_mensais: gastosCheck.error ? "erro" : "ok",
+                produtos_calculadora: produtosCheck.error ? "erro" : "ok"
             },
             timestamp: new Date().toISOString()
         });
@@ -131,7 +209,7 @@ app.get('/api/supabase-status', async (req, res) => {
 });
 
 // =============================================
-// ROTAS DE GASTOS MENSAL - SIMPLIFICADAS
+// ROTAS DE GASTOS MENSAL
 // =============================================
 
 // Garantir tabela antes de todas as rotas de gastos
@@ -450,7 +528,7 @@ app.put('/api/gastos/:id/pagar-parcela', async (req, res) => {
     }
 });
 
-// Obter faturas pendentes por cartão - SIMPLIFICADO
+// Obter faturas pendentes por cartão
 app.get('/api/gastos/faturas-pendentes', async (req, res) => {
     try {
         const { cartao } = req.query;
@@ -663,7 +741,7 @@ app.delete('/api/gastos/:id', async (req, res) => {
     }
 });
 
-// Obter resumo por cartão - SIMPLIFICADO
+// Obter resumo por cartão
 app.get('/api/gastos/resumo/cartoes', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -973,9 +1051,186 @@ app.delete('/api/clientes/:id', async (req, res) => {
 });
 
 // =============================================
-// ROTA PARA CRIAR TABELA DE GASTOS
+// ROTAS DE PRODUTOS (CALCULADORA)
 // =============================================
 
+// Garantir tabela antes de todas as rotas de produtos
+app.use('/api/products*', async (req, res, next) => {
+    try {
+        await garantirTabelaProdutos();
+        next();
+    } catch (error) {
+        console.error('Erro ao garantir tabela produtos:', error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor - tabela não disponível",
+            details: error.message 
+        });
+    }
+});
+
+// Salvar produto da calculadora
+app.post('/api/products', uploadProduto.single('produtoFoto'), async (req, res) => {
+    try {
+        console.log('📦 Recebendo dados do produto...');
+        
+        // Verificar se há dados JSON
+        if (!req.body.data) {
+            return res.status(400).json({ 
+                error: "Dados do produto não fornecidos" 
+            });
+        }
+
+        // Parse dos dados JSON
+        const produtoData = JSON.parse(req.body.data);
+        
+        // Validação básica
+        if (!produtoData.nome_produto || !produtoData.preco_venda_unitario) {
+            return res.status(400).json({ 
+                error: "Dados obrigatórios faltando" 
+            });
+        }
+
+        // Processar upload da imagem se existir
+        let fotoUrl = null;
+        if (req.file) {
+            console.log('📸 Processando upload da imagem...');
+            
+            // Gerar nome único para o arquivo
+            const fileExt = req.file.originalname.split('.').pop();
+            const fileName = `produto_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+            
+            // Em ambiente de produção, você faria upload para um serviço de storage
+            // Por enquanto, vamos salvar apenas o nome do arquivo
+            fotoUrl = fileName;
+            
+            console.log(`✅ Imagem processada: ${fileName}`);
+        }
+
+        // Preparar dados para inserção
+        const dadosParaInserir = {
+            nome_produto: produtoData.nome_produto,
+            quantidade_produtos: produtoData.quantidade_produtos || 1,
+            tecido_tipo: produtoData.tecido_tipo || '',
+            valor_total_tecido: produtoData.valor_total_tecido || 0,
+            comprimento_total_tecido: produtoData.comprimento_total_tecido || 0,
+            largura_tecido: produtoData.largura_tecido || 0,
+            metragem_utilizada: produtoData.metragem_utilizada || 0,
+            custo_unitario_tecido: produtoData.custo_unitario_tecido || 0,
+            custo_unitario_aviamentos: produtoData.custo_unitario_aviamentos || 0,
+            custo_unitario_mo: produtoData.custo_unitario_mo || 0,
+            custo_unitario_embalagem: produtoData.custo_unitario_embalagem || 0,
+            custo_unitario_transporte: produtoData.custo_unitario_transporte || 0,
+            porcentagem_lucro: produtoData.porcentagem_lucro || 0,
+            lucro_unitario: produtoData.lucro_unitario || 0,
+            preco_venda_unitario: produtoData.preco_venda_unitario || 0,
+            aviamentos_data: produtoData.aviamentos_data || [],
+            foto_url: fotoUrl,
+            data_atualizacao: new Date().toISOString()
+        };
+
+        console.log('💾 Salvando produto no banco de dados...', dadosParaInserir.nome_produto);
+
+        const { data, error } = await supabase
+            .from('produtos_calculadora')
+            .insert([dadosParaInserir])
+            .select();
+
+        if (error) {
+            console.error('❌ Erro ao inserir no Supabase:', error);
+            throw error;
+        }
+
+        console.log('✅ Produto salvo com sucesso! ID:', data[0]?.id);
+
+        res.status(200).json({ 
+            message: "✅ Produto salvo com sucesso!", 
+            id: data[0]?.id,
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao salvar produto:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
+// Listar todos os produtos
+app.get('/api/products', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('produtos_calculadora')
+            .select('*')
+            .order('data_cadastro', { ascending: false });
+
+        if (error) throw error;
+
+        res.status(200).json(data || []);
+    } catch (error) {
+        console.error('❌ Erro ao buscar produtos:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Buscar produto por ID
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data, error } = await supabase
+            .from('produtos_calculadora')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: "Produto não encontrado" });
+        }
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('❌ Erro ao buscar produto:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Excluir produto
+app.delete('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`🗑️ Excluindo produto ID: ${id}`);
+
+        const { error } = await supabase
+            .from('produtos_calculadora')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: "✅ Produto excluído com sucesso!" 
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao excluir produto:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// =============================================
+// ROTAS PARA CRIAR TABELAS
+// =============================================
+
+// Rota para criar tabela de gastos
 app.get('/api/criar-tabela-gastos', async (req, res) => {
     try {
         const tabelaCriada = await garantirTabelaGastos();
@@ -983,6 +1238,29 @@ app.get('/api/criar-tabela-gastos', async (req, res) => {
         if (tabelaCriada) {
             res.status(200).json({ 
                 message: "✅ Tabela 'gastos_mensais' verificada/criada com sucesso!" 
+            });
+        } else {
+            res.status(500).json({ 
+                error: "Erro ao criar/verificar tabela" 
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao verificar/criar tabela:', error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Rota para criar tabela de produtos
+app.get('/api/criar-tabela-produtos', async (req, res) => {
+    try {
+        const tabelaCriada = await garantirTabelaProdutos();
+        
+        if (tabelaCriada) {
+            res.status(200).json({ 
+                message: "✅ Tabela 'produtos_calculadora' verificada/criada com sucesso!" 
             });
         } else {
             res.status(500).json({ 
@@ -1050,6 +1328,7 @@ app.listen(port, async () => {
     - GET  /api/wake-up              - Healthcheck do servidor
     - GET  /api/supabase-status      - Status da conexão Supabase
     - GET  /api/criar-tabela-gastos  - Criar tabela de gastos
+    - GET  /api/criar-tabela-produtos - Criar tabela de produtos
     
     💳 GASTOS MENSAL:
     - POST /api/gastos               - Salvar compra
@@ -1071,6 +1350,12 @@ app.listen(port, async () => {
     - PUT  /api/clientes/:id         - Atualizar cliente
     - DELETE /api/clientes/:id       - Excluir cliente
     
+    📦 PRODUTOS (CALCULADORA):
+    - POST /api/products             - Salvar produto da calculadora
+    - GET  /api/products             - Listar produtos
+    - GET  /api/products/:id         - Obter produto específico
+    - DELETE /api/products/:id       - Excluir produto
+    
     🌐 PÁGINAS HTML:
     - GET  /                         - Página inicial
     - GET  /dashboard.html           - Dashboard
@@ -1086,11 +1371,14 @@ app.listen(port, async () => {
     ╚═══════════════════════════════════════════════════════════╝
     `);
     
-    // Garantir que a tabela existe ao iniciar
+    // Garantir que as tabelas existem ao iniciar
     try {
         await garantirTabelaGastos();
         console.log('✅ Tabela de gastos verificada/criada com sucesso!');
+        
+        await garantirTabelaProdutos();
+        console.log('✅ Tabela de produtos verificada/criada com sucesso!');
     } catch (error) {
-        console.error('❌ Erro ao verificar/criar tabela:', error);
+        console.error('❌ Erro ao verificar/criar tabelas:', error);
     }
 });
