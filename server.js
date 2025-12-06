@@ -105,66 +105,501 @@ async function garantirTabelaGastos() {
     }
 }
 
-// Função para garantir que a tabela produtos existe (conforme imagem)
+// =============================================
+// FUNÇÕES AUXILIARES (ATUALIZADAS)
+// =============================================
+
+// Função para garantir que a tabela products existe (com nome CORRETO: products)
 async function garantirTabelaProdutos() {
     try {
-        // Verificar se a tabela existe
+        // Verificar se a tabela products existe
         const { error: checkError } = await supabase
-            .from('productu')
+            .from('products')
             .select('id')
             .limit(1);
 
         if (checkError && checkError.code === '42P01') {
-            // Tabela não existe, criar conforme imagem
-            console.log('Criando tabela productu (conforme imagem)...');
+            // Tabela não existe, criar com nome CORRETO: products
+            console.log('🔄 Criando tabela products...');
             
-            const { error: createError } = await supabase.rpc('exec_sql', {
-                sql: `
-                    CREATE TABLE productu (
-                        id BIGSERIAL PRIMARY KEY,
-                        created_at TIMESTAMPTZ DEFAULT NOW(),
-                        nome_produto TEXT NOT NULL,
-                        imagem_url TEXT,
-                        tipo_tecido TEXT NOT NULL,
-                        valor_total_tecido DECIMAL(10,2) NOT NULL,
-                        comprimento_total_tecido DECIMAL(10,2) NOT NULL,
-                        largura_tecido DECIMAL(10,2) NOT NULL,
-                        metragem_utilizada DECIMAL(10,2) NOT NULL,
-                        custo_tecido DECIMAL(10,2) NOT NULL,
-                        custo_mao_obra DECIMAL(10,2) NOT NULL,
-                        custo_embalagem DECIMAL(10,2) NOT NULL,
-                        custo_transporte DECIMAL(10,2) NOT NULL,
-                        custo_aviamentos DECIMAL(10,2) NOT NULL DEFAULT 0,
-                        custo_materiais DECIMAL(10,2) NOT NULL,
-                        custo_produto_total DECIMAL(10,2) NOT NULL,
-                        porcentagem_lucro DECIMAL(10,2) NOT NULL,
-                        valor_lucro DECIMAL(10,2) NOT NULL,
-                        preco_venda_final DECIMAL(10,2) NOT NULL,
-                        quantidade_lote INTEGER NOT NULL DEFAULT 1,
-                        valor_total_lote DECIMAL(10,2) NOT NULL,
-                        detalhes_aviamentos JSONB,
-                        sold_at TIMESTAMPTZ
-                    );
-                    
-                    CREATE INDEX idx_productu_nome ON productu(nome_produto);
-                    CREATE INDEX idx_productu_data ON productu(created_at);
-                `
-            });
-
-            if (createError) {
-                console.error('Erro ao criar tabela productu:', createError);
+            // Tentar criar via inserção de teste
+            const { error: testError } = await supabase
+                .from('products')
+                .insert([{
+                    nome_produto: 'TESTE_INICIALIZACAO_TABELA',
+                    tipo_tecido: 'TESTE',
+                    valor_total_tecido: 0,
+                    comprimento_total_tecido: 0,
+                    largura_tecido: 0,
+                    metragem_utilizada: 0,
+                    custo_tecido: 0,
+                    custo_mao_obra: 0,
+                    custo_embalagem: 0,
+                    custo_transporte: 0,
+                    custo_aviamentos: 0,
+                    custo_materiais: 0,
+                    custo_produto_total: 0,
+                    porcentagem_lucro: 0,
+                    valor_lucro: 0,
+                    preco_venda_final: 0,
+                    quantidade_lote: 1,
+                    valor_total_lote: 0,
+                    created_at: new Date().toISOString()
+                }])
+                .select();
+                
+            if (testError && testError.code === '42P01') {
+                console.error('❌ Tabela products não existe. Crie manualmente no Supabase:');
+                console.log(`
+                ⚠️ EXECUTE ESTE SQL NO SUPABASE SQL EDITOR:
+                --------------------------------------------------
+                CREATE TABLE IF NOT EXISTS products (
+                    id BIGSERIAL PRIMARY KEY,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    nome_produto TEXT NOT NULL,
+                    imagem_url TEXT,
+                    tipo_tecido TEXT NOT NULL,
+                    valor_total_tecido DECIMAL(10,2) NOT NULL,
+                    comprimento_total_tecido DECIMAL(10,2) NOT NULL,
+                    largura_tecido DECIMAL(10,2) NOT NULL,
+                    metragem_utilizada DECIMAL(10,2) NOT NULL,
+                    custo_tecido DECIMAL(10,2) NOT NULL,
+                    custo_mao_obra DECIMAL(10,2) NOT NULL,
+                    custo_embalagem DECIMAL(10,2) NOT NULL,
+                    custo_transporte DECIMAL(10,2) NOT NULL,
+                    custo_aviamentos DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    custo_materiais DECIMAL(10,2) NOT NULL,
+                    custo_produto_total DECIMAL(10,2) NOT NULL,
+                    porcentagem_lucro DECIMAL(10,2) NOT NULL,
+                    valor_lucro DECIMAL(10,2) NOT NULL,
+                    preco_venda_final DECIMAL(10,2) NOT NULL,
+                    quantidade_lote INTEGER NOT NULL DEFAULT 1,
+                    valor_total_lote DECIMAL(10,2) NOT NULL,
+                    detalhes_aviamentos JSONB,
+                    sold_at TIMESTAMPTZ
+                );
+                
+                CREATE INDEX IF NOT EXISTS idx_products_nome ON products(nome_produto);
+                CREATE INDEX IF NOT EXISTS idx_products_data ON products(created_at);
+                --------------------------------------------------
+                `);
                 return false;
             }
             
-            console.log('Tabela productu criada com sucesso!');
+            console.log('✅ Tabela products verificada/criada com sucesso');
         }
         
         return true;
     } catch (error) {
-        console.error('Erro ao verificar/criar tabela productu:', error);
+        console.error('❌ Erro ao verificar/criar tabela products:', error.message);
         return false;
     }
 }
+
+// ... resto do código mantido ...
+
+// =============================================
+// ROTAS DE PRODUTOS (CALCULADORA) - ATUALIZADO
+// =============================================
+
+// Garantir tabela antes de todas as rotas de produtos (ATUALIZADO)
+app.use('/api/products*', async (req, res, next) => {
+    try {
+        await garantirTabelaProdutos();
+        next();
+    } catch (error) {
+        console.error('Erro ao garantir tabela produtos:', error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor - tabela não disponível",
+            details: error.message 
+        });
+    }
+});
+
+// Salvar produto da calculadora (ATUALIZADO)
+app.post('/api/products', uploadProduto.single('produtoFoto'), async (req, res) => {
+    try {
+        console.log('📦 Recebendo dados do produto...');
+        
+        // Verificar se há dados JSON
+        if (!req.body.data) {
+            return res.status(400).json({ 
+                error: "Dados do produto não fornecidos" 
+            });
+        }
+
+        // Parse dos dados JSON
+        const produtoData = JSON.parse(req.body.data);
+        
+        // Validação básica
+        if (!produtoData.nome_produto) {
+            return res.status(400).json({ 
+                error: "Nome do produto é obrigatório" 
+            });
+        }
+
+        // Processar upload da imagem se existir
+        let imagemUrl = null;
+        if (req.file) {
+            console.log('📸 Processando upload da imagem...');
+            
+            // Gerar nome único para o arquivo
+            const fileExt = req.file.originalname.split('.').pop();
+            const fileName = `produto_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+            
+            // Em produção, faça upload para storage
+            imagemUrl = fileName;
+            
+            console.log(`✅ Imagem processada: ${fileName}`);
+        }
+
+        // Calcular campos derivados
+        const custoMateriais = produtoData.custo_materiais || 
+            ((produtoData.custo_tecido || 0) + 
+             (produtoData.custo_aviamentos || 0) + 
+             (produtoData.custo_embalagem || 0) + 
+             (produtoData.custo_transporte || 0));
+        
+        const custoProdutoTotal = produtoData.custo_produto_total || 
+            (custoMateriais + (produtoData.custo_mao_obra || 0));
+        
+        const valorTotalLote = produtoData.valor_total_lote || 
+            ((produtoData.preco_venda_final || 0) * (produtoData.quantidade_lote || 1));
+
+        // Preparar dados para inserção na tabela CORRETA: products
+        const dadosParaInserir = {
+            nome_produto: produtoData.nome_produto,
+            imagem_url: imagemUrl,
+            tipo_tecido: produtoData.tipo_tecido || produtoData.tecido_tipo || '',
+            valor_total_tecido: produtoData.valor_total_tecido || 0,
+            comprimento_total_tecido: produtoData.comprimento_total_tecido || 0,
+            largura_tecido: produtoData.largura_tecido || 0,
+            metragem_utilizada: produtoData.metragem_utilizada || 0,
+            custo_tecido: produtoData.custo_tecido || produtoData.custo_unitario_tecido || 0,
+            custo_mao_obra: produtoData.custo_mao_obra || produtoData.custo_unitario_mo || 0,
+            custo_embalagem: produtoData.custo_embalagem || produtoData.custo_unitario_embalagem || 0,
+            custo_transporte: produtoData.custo_transporte || produtoData.custo_unitario_transporte || 0,
+            custo_aviamentos: produtoData.custo_aviamentos || produtoData.custo_unitario_aviamentos || 0,
+            custo_materiais: custoMateriais,
+            custo_produto_total: custoProdutoTotal,
+            porcentagem_lucro: produtoData.porcentagem_lucro || 0,
+            valor_lucro: produtoData.valor_lucro || produtoData.lucro_unitario || 0,
+            preco_venda_final: produtoData.preco_venda_final || produtoData.preco_venda_unitario || 0,
+            quantidade_lote: produtoData.quantidade_lote || produtoData.quantidade_produtos || 1,
+            valor_total_lote: valorTotalLote,
+            detalhes_aviamentos: produtoData.detalhes_aviamentos || produtoData.aviamentos_data || [],
+            created_at: new Date().toISOString()
+        };
+
+        console.log('💾 Salvando produto na tabela products...', dadosParaInserir.nome_produto);
+
+        // INSERIR na tabela CORRETA: products
+        const { data, error } = await supabase
+            .from('products')
+            .insert([dadosParaInserir])
+            .select();
+
+        if (error) {
+            console.error('❌ Erro ao inserir no Supabase:', error);
+            
+            // Se erro for tabela não encontrada, fornecer instruções
+            if (error.code === '42P01') {
+                return res.status(500).json({ 
+                    error: "Tabela 'products' não encontrada",
+                    details: "Execute o SQL de criação da tabela no Supabase SQL Editor",
+                    sql: `
+                        CREATE TABLE IF NOT EXISTS products (
+                            id BIGSERIAL PRIMARY KEY,
+                            created_at TIMESTAMPTZ DEFAULT NOW(),
+                            nome_produto TEXT NOT NULL,
+                            imagem_url TEXT,
+                            tipo_tecido TEXT NOT NULL,
+                            valor_total_tecido DECIMAL(10,2) NOT NULL,
+                            comprimento_total_tecido DECIMAL(10,2) NOT NULL,
+                            largura_tecido DECIMAL(10,2) NOT NULL,
+                            metragem_utilizada DECIMAL(10,2) NOT NULL,
+                            custo_tecido DECIMAL(10,2) NOT NULL,
+                            custo_mao_obra DECIMAL(10,2) NOT NULL,
+                            custo_embalagem DECIMAL(10,2) NOT NULL,
+                            custo_transporte DECIMAL(10,2) NOT NULL,
+                            custo_aviamentos DECIMAL(10,2) NOT NULL DEFAULT 0,
+                            custo_materiais DECIMAL(10,2) NOT NULL,
+                            custo_produto_total DECIMAL(10,2) NOT NULL,
+                            porcentagem_lucro DECIMAL(10,2) NOT NULL,
+                            valor_lucro DECIMAL(10,2) NOT NULL,
+                            preco_venda_final DECIMAL(10,2) NOT NULL,
+                            quantidade_lote INTEGER NOT NULL DEFAULT 1,
+                            valor_total_lote DECIMAL(10,2) NOT NULL,
+                            detalhes_aviamentos JSONB,
+                            sold_at TIMESTAMPTZ
+                        );
+                    `
+                });
+            }
+            
+            throw error;
+        }
+
+        console.log('✅ Produto salvo com sucesso! ID:', data[0]?.id);
+
+        res.status(200).json({ 
+            message: "✅ Produto salvo com sucesso!", 
+            id: data[0]?.id,
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao salvar produto:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
+// Listar todos os produtos (ATUALIZADO)
+app.get('/api/products', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        res.status(200).json(data || []);
+    } catch (error) {
+        console.error('❌ Erro ao buscar produtos:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Buscar produto por ID (ATUALIZADO)
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: "Produto não encontrado" });
+        }
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('❌ Erro ao buscar produto:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Atualizar produto (ATUALIZADO)
+app.put('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        console.log(`🔄 Atualizando produto ID: ${id}`, updateData);
+
+        const { data, error } = await supabase
+            .from('products')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: "Produto não encontrado" });
+        }
+
+        res.status(200).json({ 
+            message: "✅ Produto atualizado com sucesso!", 
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao atualizar produto:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Marcar produto como vendido (ATUALIZADO)
+app.put('/api/products/:id/vender', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`💰 Marcando produto ID: ${id} como vendido`);
+
+        const updateData = {
+            sold_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('products')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: "Produto não encontrado" });
+        }
+
+        res.status(200).json({ 
+            message: "✅ Produto marcado como vendido com sucesso!", 
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao marcar produto como vendido:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Excluir produto (ATUALIZADO)
+app.delete('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`🗑️ Excluindo produto ID: ${id}`);
+
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: "✅ Produto excluído com sucesso!" 
+        });
+
+    } catch (error) {
+        console.error("❌ Erro ao excluir produto:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// Obter estatísticas de produtos (ATUALIZADO)
+app.get('/api/products/estatisticas', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*');
+
+        if (error) throw error;
+
+        const estatisticas = {
+            total_produtos: 0,
+            produtos_vendidos: 0,
+            produtos_disponiveis: 0,
+            valor_total_estoque: 0,
+            valor_total_vendido: 0,
+            lucro_total: 0
+        };
+
+        if (data && data.length > 0) {
+            data.forEach(produto => {
+                estatisticas.total_produtos++;
+                
+                if (produto.sold_at) {
+                    estatisticas.produtos_vendidos++;
+                    estatisticas.valor_total_vendido += parseFloat(produto.valor_total_lote || 0);
+                    estatisticas.lucro_total += parseFloat(produto.valor_lucro || 0) * parseFloat(produto.quantidade_lote || 1);
+                } else {
+                    estatisticas.produtos_disponiveis++;
+                    estatisticas.valor_total_estoque += parseFloat(produto.valor_total_lote || 0);
+                }
+            });
+        }
+
+        res.status(200).json(estatisticas);
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar estatísticas:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =============================================
+// ROTA PARA CRIAR TABELA PRODUCTS
+// =============================================
+
+// Rota para criar tabela de produtos (ATUALIZADA)
+app.get('/api/criar-tabela-produtos', async (req, res) => {
+    try {
+        const tabelaCriada = await garantirTabelaProdutos();
+        
+        if (tabelaCriada) {
+            res.status(200).json({ 
+                message: "✅ Tabela 'products' verificada/criada com sucesso!" 
+            });
+        } else {
+            res.status(500).json({ 
+                error: "Erro ao criar/verificar tabela. Crie manualmente com o SQL fornecido." 
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao verificar/criar tabela:', error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
+    }
+});
+
+// =============================================
+// ATUALIZAR VERIFICAÇÃO DE STATUS
+// =============================================
+
+// Verificar status do Supabase (ATUALIZADO)
+app.get('/api/supabase-status', async (req, res) => {
+    try {
+        // Garantir que as tabelas existem
+        await garantirTabelaGastos();
+        await garantirTabelaProdutos();
+        
+        const [clientesCheck, gastosCheck, produtosCheck] = await Promise.all([
+            supabase.from('clientes_iptv').select('count', { count: 'exact' }).limit(1),
+            supabase.from('gastos_mensais').select('count', { count: 'exact' }).limit(1),
+            supabase.from('products').select('count', { count: 'exact' }).limit(1)  // ATUALIZADO
+        ]);
+
+        res.status(200).json({
+            status: "conectado",
+            tabelas: {
+                clientes_iptv: clientesCheck.error ? "erro" : "ok",
+                gastos_mensais: gastosCheck.error ? "erro" : "ok",
+                products: produtosCheck.error ? "erro" : "ok"  // ATUALIZADO
+            },
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: "erro",
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 
 // =============================================
 // ROTAS DO SISTEMA
@@ -1515,3 +1950,4 @@ app.listen(port, async () => {
         console.error('❌ Erro ao verificar/criar tabelas:', error);
     }
 });
+
