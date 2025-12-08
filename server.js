@@ -13,8 +13,8 @@ const supabaseUrl = process.env.SUPABASE_URL || 'https://pcbtgvdcihowmtmqzhns.su
 const supabaseKey = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYnRndmRjaWhvd210bXF6aG5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIyODk1OSwiZXhwIjoyMDc4ODA0OTU5fQ.2F5YFviXUv5LeQmNKvPgiVAHmeioJ_3ro9K8enZxVsM';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Nome do Bucket para Imagens (Deve ser Público no Supabase)
-const BUCKET_NAME = 'imagens-produtos';
+// Nome do Bucket para Imagens (AJUSTADO PARA 'produtos')
+const BUCKET_NAME = 'produtos';
 
 // Middleware
 app.use(cors());
@@ -29,6 +29,7 @@ const upload = multer({
 });
 
 // Configuração do Multer para upload de produtos (imagens)
+// Mantido o nome da variável 'uploadProduto' para as outras rotas que possam usar
 const storageProdutos = multer.memoryStorage();
 const uploadProduto = multer({ 
   storage: storageProdutos,
@@ -101,7 +102,7 @@ async function garantirTabelaGastos() {
     }
 }
 
-// Função para garantir que a tabela products existe e tem as colunas corretas
+// Função para garantir que a tabela products existe e tem as colunas corretas (AJUSTADO)
 async function garantirTabelaProducts() {
     try {
         const { error: checkError } = await supabase
@@ -119,27 +120,27 @@ async function garantirTabelaProducts() {
                         created_at TIMESTAMPTZ DEFAULT NOW(),
                         nome_produto TEXT NOT NULL,
                         imagem_url TEXT,
-                        tipo_tecido TEXT NOT NULL,
-                        valor_total_tecido DECIMAL(10,2) NOT NULL,
-                        comprimento_total_tecido DECIMAL(10,2) NOT NULL,
-                        largura_tecido DECIMAL(10,2) NOT NULL,
-                        metragem_utilizada DECIMAL(10,2) NOT NULL,
-                        custo_tecido DECIMAL(10,2) NOT NULL,
-                        custo_mao_obra DECIMAL(10,2) NOT NULL,
-                        custo_embalagem DECIMAL(10,2) NOT NULL,
-                        custo_transporte DECIMAL(10,2) NOT NULL,
-                        custo_aviamentos DECIMAL(10,2) NOT NULL DEFAULT 0,
-                        custo_materiais DECIMAL(10,2) NOT NULL,
-                        custo_produto_total DECIMAL(10,2) NOT NULL DEFAULT 0,
-                        porcentagem_lucro DECIMAL(10,2) NOT NULL,
-                        valor_lucro DECIMAL(10,2) NOT NULL,
-                        preco_venda_final DECIMAL(10,2) NOT NULL,
-                        quantidade_lote INTEGER NOT NULL DEFAULT 1,
-                        valor_total_lote DECIMAL(10,2) NOT NULL,
+                        tipo_tecido TEXT,
+                        valor_total_tecido DECIMAL(10,2) DEFAULT 0,
+                        comprimento_total_tecido DECIMAL(10,2) DEFAULT 0,
+                        largura_tecido DECIMAL(10,2) DEFAULT 0,
+                        metragem_utilizada DECIMAL(10,2) DEFAULT 0,
+                        custo_tecido DECIMAL(10,2) DEFAULT 0,
+                        custo_mao_obra DECIMAL(10,2) DEFAULT 0,
+                        custo_embalagem DECIMAL(10,2) DEFAULT 0,
+                        custo_transporte DECIMAL(10,2) DEFAULT 0,
+                        custo_aviamentos DECIMAL(10,2) DEFAULT 0,
+                        custo_materiais DECIMAL(10,2) DEFAULT 0,
+                        custo_producao_total DECIMAL(10,2) DEFAULT 0, -- NOVO NOME DA COLUNA
+                        porcentagem_lucro DECIMAL(10,2) DEFAULT 0,
+                        valor_lucro DECIMAL(10,2) DEFAULT 0,
+                        preco_venda_final DECIMAL(10,2) DEFAULT 0,
+                        quantidade_lote INTEGER DEFAULT 1,
+                        valor_total_lote DECIMAL(10,2) DEFAULT 0,
                         detalhes_aviamentos JSONB,
                         sold_at TIMESTAMPTZ,
                         
-                        -- Campos adicionais/unitários para a calculadora (Obrigatórios)
+                        -- Colunas unitárias
                         quantidade_produtos INTEGER DEFAULT 1,
                         tecido_tipo TEXT,
                         custo_unitario_tecido DECIMAL(10,2) DEFAULT 0,
@@ -164,10 +165,12 @@ async function garantirTabelaProducts() {
             // Caso 2: Tabela existe, tentar adicionar colunas que faltam (MIGRATION)
             console.log('Tabela products já existe. Executando correção de esquema (Migration)...');
             
-            // Tentativa de adicionar todas as colunas que podem ter sido perdidas em versões anteriores
+            // Adiciona a nova coluna de custo total (custo_producao_total) e as unitárias
             const { error: alterError } = await supabase.rpc('exec_sql', {
                 sql: `
-                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_produto_total DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_producao_total DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_materiais DECIMAL(10,2) DEFAULT 0;
+                    
                     ALTER TABLE products ADD COLUMN IF NOT EXISTS quantidade_produtos INTEGER DEFAULT 1;
                     ALTER TABLE products ADD COLUMN IF NOT EXISTS tecido_tipo TEXT;
                     ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_unitario_tecido DECIMAL(10,2) DEFAULT 0;
@@ -177,8 +180,6 @@ async function garantirTabelaProducts() {
                     ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_unitario_transporte DECIMAL(10,2) DEFAULT 0;
                     ALTER TABLE products ADD COLUMN IF NOT EXISTS lucro_unitario DECIMAL(10,2) DEFAULT 0;
                     ALTER TABLE products ADD COLUMN IF NOT EXISTS preco_venda_unitario DECIMAL(10,2) DEFAULT 0;
-                    -- Coluna principal custo_materiais é crucial para o cálculo, caso esteja faltando
-                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_materiais DECIMAL(10,2) DEFAULT 0;
                 `
             });
             
@@ -195,7 +196,7 @@ async function garantirTabelaProducts() {
     }
 }
 
-// Função para Garantir Bucket de Storage para Imagens
+// Função para Garantir Bucket de Storage para Imagens (AJUSTADO)
 async function garantirBucketStorage() {
     try {
         const { data: buckets, error } = await supabase.storage.listBuckets();
@@ -272,6 +273,7 @@ app.get('/api/supabase-status', async (req, res) => {
 
 // =============================================
 // ROTAS DE GASTOS MENSAL
+// (CÓDIGO DE GASTOS MANTIDO)
 // =============================================
 
 // Garantir tabela antes de todas as rotas de gastos
@@ -696,6 +698,7 @@ app.get('/api/gastos/resumo/geral', async (req, res) => {
 
 // =============================================
 // ROTAS DE CLIENTES IPTV
+// (CÓDIGO DE CLIENTES MANTIDO)
 // =============================================
 
 app.post('/api/clientes', async (req, res) => {
@@ -765,13 +768,12 @@ app.delete('/api/clientes/:id', async (req, res) => {
 });
 
 // =============================================
-// ROTAS DE PRODUTOS (CALCULADORA) - AJUSTADO
+// ROTAS DE PRODUTOS (CALCULADORA) - NOVO CÓDIGO APLICADO
 // =============================================
 
 // Garantir tabela antes de todas as rotas de produtos
 app.use('/api/products*', async (req, res, next) => {
     try {
-        // Esta chamada garante que a tabela products esteja com as colunas corretas.
         await garantirTabelaProducts();
         await garantirBucketStorage(); 
         next();
@@ -784,109 +786,100 @@ app.use('/api/products*', async (req, res, next) => {
     }
 });
 
-// Salvar produto da calculadora (estrutura compatível)
-app.post('/api/products', uploadProduto.single('produtoFoto'), async (req, res) => {
+// Rota de Salvamento de Produtos (NOVO CÓDIGO)
+app.post('/api/products', upload.single('produtoFoto'), async (req, res) => {
     try {
-        console.log('📦 Recebendo dados do produto...');
+        console.log('Recebendo requisição para salvar produto...');
         
-        // Verificar se há dados JSON
         if (!req.body.data) {
             return res.status(400).json({ error: "Dados do produto não fornecidos" });
         }
 
-        // Parse dos dados JSON
-        let produtoData;
-        try {
-            produtoData = JSON.parse(req.body.data);
-        } catch (e) {
-            return res.status(400).json({ error: "JSON inválido" });
-        }
-        
-        console.log('📊 Dados recebidos:', produtoData.nome_produto);
-        
-        if (!produtoData.nome_produto) {
-            return res.status(400).json({ error: "Nome do produto é obrigatório" });
-        }
+        const dados = JSON.parse(req.body.data);
+        const file = req.file;
+        let publicUrl = null;
 
-        // Processar upload da imagem se existir (REAL UPLOAD)
-        let imagemUrl = null;
-        if (req.file) {
-            console.log('📸 Processando upload da imagem para o Supabase Storage...');
+        console.log('Dados recebidos:', dados.nome_produto);
+
+        // 1. Upload da Imagem (se houver)
+        if (file) {
+            console.log('Processando upload de imagem...');
+            const fileName = `foto_${Date.now()}_${file.originalname.replace(/\s/g, '_')}`;
             
-            const file = req.file;
-            const fileExt = file.originalname.split('.').pop();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-            
-            // Upload para o Bucket 'imagens-produtos'
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from(BUCKET_NAME)
+            // ATENÇÃO: Usando o BUCKET_NAME ('produtos')
+            const { data: uploadData, error: uploadError } = await supabase
+                .storage
+                .from(BUCKET_NAME) 
                 .upload(fileName, file.buffer, {
-                    contentType: file.mimetype,
-                    upsert: false
+                    contentType: file.mimetype
                 });
 
             if (uploadError) {
-                console.error('❌ Erro no upload:', uploadError);
-                throw new Error(`Falha ao fazer upload da imagem: ${uploadError.message}`);
+                console.error('Erro no upload da imagem:', uploadError);
+                throw uploadError;
             }
 
-            // Obter URL Pública
-            const { data: urlData } = supabase.storage
-                .from(BUCKET_NAME)
+            // Gerar URL pública
+            const { data: urlData } = supabase
+                .storage
+                .from(BUCKET_NAME) 
                 .getPublicUrl(fileName);
             
-            imagemUrl = urlData.publicUrl;
-            console.log(`✅ Imagem processada e enviada: ${imagemUrl}`);
+            publicUrl = urlData.publicUrl;
+            console.log('Imagem salva com URL:', publicUrl);
         }
 
-        // Mapear campos da calculadora para a tabela products
-        // Garante que os valores unitários sejam usados no cálculo total (se o campo total não vier)
-        const custoUnitarioTecido = parseFloat(produtoData.custo_unitario_tecido || 0);
-        const custoUnitarioAviamentos = parseFloat(produtoData.custo_unitario_aviamentos || 0);
-        const custoUnitarioMO = parseFloat(produtoData.custo_unitario_mo || 0);
-        const custoUnitarioEmbalagem = parseFloat(produtoData.custo_unitario_embalagem || 0);
-        const custoUnitarioTransporte = parseFloat(produtoData.custo_unitario_transporte || 0);
-        const quantidadeProdutos = parseInt(produtoData.quantidade_produtos || 1);
-        const precoVendaUnitario = parseFloat(produtoData.preco_venda_unitario || 0);
-        const lucroUnitario = parseFloat(produtoData.lucro_unitario || 0);
+        // 2. Mapear dados do frontend para a estrutura da tabela
+        // Garante que todos os campos sejam convertidos para número, se necessário
+        const custoUnitarioTecido = parseFloat(dados.custo_unitario_tecido || 0);
+        const custoUnitarioAviamentos = parseFloat(dados.custo_unitario_aviamentos || 0);
+        const custoUnitarioMO = parseFloat(dados.custo_unitario_mo || 0);
+        const custoUnitarioEmbalagem = parseFloat(dados.custo_unitario_embalagem || 0);
+        const custoUnitarioTransporte = parseFloat(dados.custo_unitario_transporte || 0);
+        const quantidadeProdutos = parseInt(dados.quantidade_produtos || 1);
+        const precoVendaUnitario = parseFloat(dados.preco_venda_unitario || 0);
+        const lucroUnitario = parseFloat(dados.lucro_unitario || 0);
         
-        const custoMateriais = custoUnitarioTecido + custoUnitarioAviamentos + custoUnitarioEmbalagem + custoUnitarioTransporte;
-        const custoProdutoTotal = custoMateriais + custoUnitarioMO;
-        
-        const valorTotalLote = precoVendaUnitario * quantidadeProdutos;
-
+        const custoMateriais = custoUnitarioTecido + custoUnitarioAviamentos;
+        const custoProducaoTotal = custoMateriais + custoUnitarioMO + custoUnitarioEmbalagem + custoUnitarioTransporte;
 
         const dadosParaInserir = {
-            nome_produto: produtoData.nome_produto,
-            imagem_url: imagemUrl, // URL real do Supabase
-            tipo_tecido: produtoData.tecido_tipo || produtoData.tipo_tecido || '',
+            nome_produto: dados.nome_produto,
+            imagem_url: publicUrl,
             
-            // Valores Totais (padrão do schema antigo, mantido)
-            valor_total_tecido: produtoData.valor_total_tecido || 0,
-            comprimento_total_tecido: produtoData.comprimento_total_tecido || 0,
-            largura_tecido: produtoData.largura_tecido || 0,
-            metragem_utilizada: produtoData.metragem_utilizada || 0,
-            custo_tecido: custoUnitarioTecido, // Custo unitário
-            custo_mao_obra: custoUnitarioMO, // Custo unitário
-            custo_embalagem: custoUnitarioEmbalagem, // Custo unitário
-            custo_transporte: custoUnitarioTransporte, // Custo unitário
-            custo_aviamentos: custoUnitarioAviamentos, // Custo unitário
+            // Dados do tecido
+            tipo_tecido: dados.tecido_tipo,
+            valor_total_tecido: parseFloat(dados.valor_total_tecido || 0),
+            comprimento_total_tecido: parseFloat(dados.comprimento_total_tecido || 0),
+            largura_tecido: parseFloat(dados.largura_tecido || 0),
+            metragem_utilizada: parseFloat(dados.metragem_utilizada || 0),
             
-            // Colunas cruciais calculadas
-            custo_materiais: custoMateriais, // Soma dos materiais (unitário)
-            custo_produto_total: custoProdutoTotal, // Custo total de produção (unitário)
+            // Custos unitários (salvos também como as colunas custo_...)
+            custo_tecido: custoUnitarioTecido,
+            custo_mao_obra: custoUnitarioMO,
+            custo_embalagem: custoUnitarioEmbalagem,
+            custo_transporte: custoUnitarioTransporte,
+            custo_aviamentos: custoUnitarioAviamentos,
             
-            porcentagem_lucro: produtoData.porcentagem_lucro || 0,
-            valor_lucro: lucroUnitario, // Lucro unitário
+            // Custos Calculados
+            custo_materiais: custoMateriais,
+            custo_producao_total: custoProducaoTotal, // Corrigido para a soma das variáveis locais
+            
+            // Lucro e preço
+            porcentagem_lucro: parseFloat(dados.porcentagem_lucro || 0),
+            valor_lucro: lucroUnitario,
             preco_venda_final: precoVendaUnitario, // Preço de venda unitário
             
+            // Lote
             quantidade_lote: quantidadeProdutos,
-            valor_total_lote: valorTotalLote, // Preço de venda * Qtd
-            detalhes_aviamentos: produtoData.aviamentos_data || produtoData.detalhes_aviamentos || [],
+            valor_total_lote: precoVendaUnitario * quantidadeProdutos,
             
-            // Campos unitários adicionais (Garante que os dados sejam salvos)
+            // Detalhes adicionais
+            detalhes_aviamentos: dados.aviamentos_data || [],
+            
+            // Campos unitários adicionais
             quantidade_produtos: quantidadeProdutos,
-            tecido_tipo: produtoData.tecido_tipo || '',
+            tecido_tipo: dados.tecido_tipo,
             custo_unitario_tecido: custoUnitarioTecido,
             custo_unitario_aviamentos: custoUnitarioAviamentos,
             custo_unitario_mo: custoUnitarioMO,
@@ -896,30 +889,48 @@ app.post('/api/products', uploadProduto.single('produtoFoto'), async (req, res) 
             preco_venda_unitario: precoVendaUnitario
         };
 
-        const { data, error } = await supabase.from('products').insert([dadosParaInserir]).select();
+
+        console.log('Inserindo no banco de dados:', dadosParaInserir.nome_produto);
+
+        // 3. Salvar no Banco de Dados
+        const { data, error } = await supabase
+            .from('products')
+            .insert([dadosParaInserir])
+            .select();
 
         if (error) {
-            console.error('❌ Erro ao inserir no Supabase:', error);
-            // Isso irá printar o erro exato se o problema de coluna for outro
-            return res.status(500).json({ error: "Erro ao salvar no banco de dados", details: error.message });
+            console.error('Erro ao inserir no Supabase:', error);
+            throw error;
         }
 
-        console.log('✅ Produto salvo com sucesso! ID:', data[0]?.id);
+        console.log('Produto salvo com sucesso! ID:', data[0]?.id);
 
-        res.status(200).json({ message: "✅ Produto salvo com sucesso!", id: data[0]?.id, data: data[0] });
+        res.status(200).json({ 
+            message: "✅ Produto salvo com sucesso!", 
+            id: data[0]?.id,
+            data: data[0]
+        });
 
     } catch (error) {
-        console.error("❌ Erro ao salvar produto:", error);
-        res.status(500).json({ error: "Erro interno do servidor", details: error.message });
+        console.error("❌ Erro completo ao salvar:", error);
+        res.status(500).json({ 
+            error: "Erro interno do servidor",
+            details: error.message 
+        });
     }
 });
 
-// Listar todos os produtos
+// Rota para listar produtos (NOVO CÓDIGO)
 app.get('/api/products', async (req, res) => {
     try {
-        const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
+
         if (error) throw error;
-        res.status(200).json(data || []);
+
+        res.status(200).json(data);
     } catch (error) {
         console.error('❌ Erro ao buscar produtos:', error);
         res.status(500).json({ error: error.message });
@@ -996,9 +1007,11 @@ app.get('/api/products/estatisticas', async (req, res) => {
             data.forEach(produto => {
                 estatisticas.total_produtos++;
                 if (produto.sold_at) {
-                    estatisticas.produtos_vendidos++;
+                    // Aqui, usamos valor_total_lote para o valor de venda
                     estatisticas.valor_total_vendido += parseFloat(produto.valor_total_lote || 0);
+                    // O lucro total é calculado com base no valor_lucro unitário * quantidade
                     estatisticas.lucro_total += parseFloat(produto.valor_lucro || 0) * parseFloat(produto.quantidade_lote || 1);
+                    estatisticas.produtos_vendidos++;
                 } else {
                     estatisticas.produtos_disponiveis++;
                     estatisticas.valor_total_estoque += parseFloat(produto.valor_total_lote || 0);
@@ -1075,7 +1088,7 @@ app.listen(port, async () => {
         console.log('✅ Tabela de products verificada!');
 
         await garantirBucketStorage(); // Garante bucket na inicialização
-        console.log('✅ Bucket de imagens verificado!');
+        console.log(`✅ Bucket de imagens (${BUCKET_NAME}) verificado!`);
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
     }
