@@ -8,6 +8,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Configuração do Supabase
+// Se estiver rodando local sem .env, as chaves abaixo são usadas como fallback (não recomendado para produção)
 const supabaseUrl = process.env.SUPABASE_URL || 'https://pcbtgvdcihowmtmqzhns.supabase.co';
 const supabaseKey = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYnRndmRjaWhvd210bXF6aG5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIyODk1OSwiZXhwIjoyMDc4ODA0OTU5fQ.2F5YFviXUv5LeQmNKvPgiVAHmeioJ_3ro9K8enZxVsM';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -88,19 +89,19 @@ async function garantirTabelaGastos() {
                 `
             });
             if (createError) {
-                console.error('Erro ao criar tabela:', createError);
+                console.error('Erro ao criar tabela gastos:', createError);
                 return false;
             }
             console.log('Tabela gastos_mensais criada com sucesso!');
         }
         return true;
     } catch (error) {
-        console.error('Erro ao verificar/criar tabela:', error);
+        console.error('Erro ao verificar/criar tabela gastos:', error);
         return false;
     }
 }
 
-// Função para garantir que a tabela products existe
+// Função para garantir que a tabela products existe e tem as colunas corretas
 async function garantirTabelaProducts() {
     try {
         const { error: checkError } = await supabase
@@ -109,6 +110,7 @@ async function garantirTabelaProducts() {
             .limit(1);
 
         if (checkError && checkError.code === '42P01') {
+            // Caso 1: Tabela não existe, criar do zero
             console.log('Criando tabela products...');
             const { error: createError } = await supabase.rpc('exec_sql', {
                 sql: `
@@ -128,7 +130,7 @@ async function garantirTabelaProducts() {
                         custo_transporte DECIMAL(10,2) NOT NULL,
                         custo_aviamentos DECIMAL(10,2) NOT NULL DEFAULT 0,
                         custo_materiais DECIMAL(10,2) NOT NULL,
-                        custo_produto_total DECIMAL(10,2) NOT NULL,
+                        custo_produto_total DECIMAL(10,2) NOT NULL DEFAULT 0,
                         porcentagem_lucro DECIMAL(10,2) NOT NULL,
                         valor_lucro DECIMAL(10,2) NOT NULL,
                         preco_venda_final DECIMAL(10,2) NOT NULL,
@@ -136,15 +138,17 @@ async function garantirTabelaProducts() {
                         valor_total_lote DECIMAL(10,2) NOT NULL,
                         detalhes_aviamentos JSONB,
                         sold_at TIMESTAMPTZ,
+                        
+                        -- Campos adicionais
                         quantidade_produtos INTEGER DEFAULT 1,
                         tecido_tipo TEXT,
-                        custo_unitario_tecido DECIMAL(10,2),
-                        custo_unitario_aviamentos DECIMAL(10,2),
-                        custo_unitario_mo DECIMAL(10,2),
-                        custo_unitario_embalagem DECIMAL(10,2),
-                        custo_unitario_transporte DECIMAL(10,2),
-                        lucro_unitario DECIMAL(10,2),
-                        preco_venda_unitario DECIMAL(10,2)
+                        custo_unitario_tecido DECIMAL(10,2) DEFAULT 0,
+                        custo_unitario_aviamentos DECIMAL(10,2) DEFAULT 0,
+                        custo_unitario_mo DECIMAL(10,2) DEFAULT 0,
+                        custo_unitario_embalagem DECIMAL(10,2) DEFAULT 0,
+                        custo_unitario_transporte DECIMAL(10,2) DEFAULT 0,
+                        lucro_unitario DECIMAL(10,2) DEFAULT 0,
+                        preco_venda_unitario DECIMAL(10,2) DEFAULT 0
                     );
                     CREATE INDEX idx_products_nome ON products(nome_produto);
                     CREATE INDEX idx_products_data ON products(created_at);
@@ -156,6 +160,29 @@ async function garantirTabelaProducts() {
                 return false;
             }
             console.log('Tabela products criada com sucesso!');
+        } else {
+            // Caso 2: Tabela existe, tentar adicionar colunas que faltam (MIGRATION)
+            // Isso corrige o erro 'Could not find column'
+            console.log('Tabela products já existe. Verificando estrutura...');
+            
+            const { error: alterError } = await supabase.rpc('exec_sql', {
+                sql: `
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_produto_total DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS quantidade_produtos INTEGER DEFAULT 1;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS tecido_tipo TEXT;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_unitario_tecido DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_unitario_aviamentos DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_unitario_mo DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_unitario_embalagem DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS custo_unitario_transporte DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS lucro_unitario DECIMAL(10,2) DEFAULT 0;
+                    ALTER TABLE products ADD COLUMN IF NOT EXISTS preco_venda_unitario DECIMAL(10,2) DEFAULT 0;
+                `
+            });
+            
+            if (alterError) {
+                console.log('⚠️ Aviso: Não foi possível atualizar colunas automaticamente. Se o erro persistir, rode o SQL manualmente no Supabase.');
+            }
         }
         return true;
     } catch (error) {
@@ -164,7 +191,7 @@ async function garantirTabelaProducts() {
     }
 }
 
-// NOVA FUNÇÃO: Garantir Bucket de Storage para Imagens
+// Função para Garantir Bucket de Storage para Imagens
 async function garantirBucketStorage() {
     try {
         const { data: buckets, error } = await supabase.storage.listBuckets();
@@ -212,7 +239,7 @@ app.get('/api/supabase-status', async (req, res) => {
     try {
         await garantirTabelaGastos();
         await garantirTabelaProducts();
-        await garantirBucketStorage(); // Verifica Storage
+        await garantirBucketStorage(); 
         
         const [clientesCheck, gastosCheck, productsCheck] = await Promise.all([
             supabase.from('clientes_iptv').select('count', { count: 'exact' }).limit(1),
