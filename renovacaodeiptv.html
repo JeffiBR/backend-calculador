@@ -1682,9 +1682,12 @@ Jeferson`;
         const valorPlano = parseFloat(planoSelecionado.getAttribute('data-valor'));
         const novaDataVencimento = calcularNovoVencimento(tipoPlano);
         
+        // Criamos uma cópia dos dados do cliente AGORA, antes de qualquer alteração
+        const clienteRenovacao = {...clienteAtual};
+        
         try {
             console.log('🔄 Iniciando renovação...', {
-                cliente: clienteAtual.id,
+                cliente: clienteRenovacao.id,
                 plano: tipoPlano,
                 valor: valorPlano,
                 novoVencimento: novaDataVencimento
@@ -1693,7 +1696,8 @@ Jeferson`;
             // 1. Registrar no histórico (não crítico)
             try {
                 console.log('📝 Registrando no histórico...');
-                await registrarRenovacao(clienteAtual, tipoPlano, valorPlano, novaDataVencimento);
+                // Nota: Usamos clienteRenovacao aqui para garantir que temos os dados
+                await registrarRenovacao(clienteRenovacao, tipoPlano, valorPlano, novaDataVencimento);
             } catch (histError) {
                 console.warn('⚠️ Histórico não registrado:', histError.message);
             }
@@ -1703,12 +1707,11 @@ Jeferson`;
                 tipo_plano: tipoPlano,
                 valor_plano: valorPlano,
                 data_vencimento: novaDataVencimento
-                // REMOVIDO: ultima_renovacao - pode não existir na tabela
             };
             
             console.log('📤 Atualizando cliente:', dadosAtualizacao);
             
-            const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteAtual.id}`, {
+            const response = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteRenovacao.id}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': supabaseKey,
@@ -1728,7 +1731,7 @@ Jeferson`;
                 // Tentar método alternativo - PUT em vez de PATCH
                 console.log('🔄 Tentando método alternativo (PUT)...');
                 
-                const putResponse = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteAtual.id}`, {
+                const putResponse = await fetch(`${supabaseUrl}/rest/v1/clientes_iptv?id=eq.${clienteRenovacao.id}`, {
                     method: 'PUT',
                     headers: {
                         'apikey': supabaseKey,
@@ -1745,24 +1748,23 @@ Jeferson`;
                 }
             }
             
-            // 3. Atualizar localmente
-            const clienteIndex = clientes.findIndex(c => c.id === clienteAtual.id);
+            // 3. Atualizar localmente na lista da tabela
+            const clienteIndex = clientes.findIndex(c => c.id === clienteRenovacao.id);
             if (clienteIndex !== -1) {
                 clientes[clienteIndex].tipo_plano = tipoPlano;
                 clientes[clienteIndex].valor_plano = valorPlano;
                 clientes[clienteIndex].data_vencimento = novaDataVencimento;
             }
             
-            // 4. Mostrar confirmação
-            const clienteRenovacao = {...clienteAtual};
-            fecharModalRenovacao();
+            // 4. Fechar modal e mostrar confirmação
+            fecharModalRenovacao(); // Isso define clienteAtual = null, por isso usamos clienteRenovacao abaixo
             abrirModalConfirmacao(clienteRenovacao, tipoPlano, novaDataVencimento, valorPlano);
             
-            // 5. Atualizar tabela
+            // 5. Atualizar renderização da tabela
             renderizarClientes(clientes);
             
-            // 6. Mensagem de sucesso
-            mostrarAlerta(`✅ Renovação realizada com sucesso para ${clienteAtual.nome}!`, 'success');
+            // 6. Mensagem de sucesso (USANDO A CÓPIA SEGURA)
+            mostrarAlerta(`✅ Renovação realizada com sucesso para ${clienteRenovacao.nome}!`, 'success');
             
         } catch (error) {
             console.error('❌ Erro ao renovar plano:', error);
