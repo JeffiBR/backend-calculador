@@ -226,6 +226,75 @@ async function garantirBucketStorage() {
 }
 
 // =============================================
+// ROTA DE RENOVAÇÕES (HISTÓRICO) - NOVO CÓDIGO
+// =============================================
+
+// Função para garantir tabela de renovações
+async function garantirTabelaRenovacoes() {
+    try {
+        const { error: checkError } = await supabase
+            .from('renovacoes_iptv')
+            .select('id')
+            .limit(1);
+
+        if (checkError && checkError.code === '42P01') {
+            console.log('Criando tabela renovacoes_iptv...');
+            const { error: createError } = await supabase.rpc('exec_sql', {
+                sql: `
+                    CREATE TABLE renovacoes_iptv (
+                        id BIGSERIAL PRIMARY KEY,
+                        cliente_id BIGINT,
+                        cliente_nome TEXT,
+                        cliente_telefone TEXT,
+                        tipo_cliente TEXT,
+                        plano_anterior TEXT,
+                        plano_novo TEXT,
+                        valor_renovacao DECIMAL(10,2),
+                        data_vencimento_anterior DATE,
+                        data_vencimento_novo DATE,
+                        revendedor TEXT,
+                        servidor TEXT,
+                        data_renovacao TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX idx_renovacoes_cliente ON renovacoes_iptv(cliente_id);
+                    CREATE INDEX idx_renovacoes_data ON renovacoes_iptv(data_renovacao);
+                `
+            });
+            if (createError) console.error('Erro ao criar tabela renovacoes:', createError);
+            else console.log('Tabela renovacoes_iptv criada com sucesso!');
+        }
+    } catch (error) {
+        console.error('Erro ao verificar tabela renovacoes:', error);
+    }
+}
+
+// Rota para salvar renovação
+app.post('/api/renovacoes', async (req, res) => {
+    try {
+        await garantirTabelaRenovacoes();
+        
+        const dados = req.body;
+        // Adiciona timestamp se não vier do front
+        if (!dados.data_renovacao) {
+            dados.data_renovacao = new Date().toISOString();
+        }
+        
+        const { data, error } = await supabase
+            .from('renovacoes_iptv')
+            .insert([dados])
+            .select();
+
+        if (error) throw error;
+
+        res.status(200).json({ message: "✅ Histórico registrado!", data: data[0] });
+    } catch (error) {
+        console.error("❌ Erro ao salvar histórico:", error);
+        // Não quebra a aplicação, apenas loga o erro, pois é histórico
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =============================================
 // ROTAS DO SISTEMA
 // =============================================
 
@@ -1093,3 +1162,4 @@ app.listen(port, async () => {
         console.error('❌ Erro na inicialização:', error);
     }
 });
+
